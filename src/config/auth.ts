@@ -2,7 +2,7 @@
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import connectDB from "./database.js";
-
+import { jwt } from "better-auth/plugins";
 export const auth = betterAuth({
   database: mongodbAdapter(await connectDB()),
 
@@ -36,4 +36,5 @@ export const auth = betterAuth({
 
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
+  plugins: [jwt()],
 });
