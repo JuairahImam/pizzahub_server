@@ -1,8 +1,21 @@
-node_modules/
-dist/
+# Environment
 .env
 .env.*
 !.env.example
 
+# Dependencies and build
+node_modules/
+dist/
+
+# Logs
 *.log
+
+# OS files
 .DS_Store
+
+# API testing sessions
+admin-cookies.txt
+customer-cookies.txt
+customer2-cookies.txt
+vendor-cookies.txt
+cookies.txt
