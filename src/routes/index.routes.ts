@@ -1,14 +1,17 @@
-
 import { Router } from "express";
 
 import userRoutes from "./user.routes.js";
 import adminRoutes from "./admin.routes.js";
 import vendorRoutes from "./vendor.routes.js";
+import menuRoutes from "./menu.routes.js";
 
 const router = Router();
 
 router.use("/users", userRoutes);
 router.use("/admin", adminRoutes);
 router.use("/vendor", vendorRoutes);
+
+// Public Customer Menu APIs
+router.use("/menu-items", menuRoutes);
 
 export default router;
