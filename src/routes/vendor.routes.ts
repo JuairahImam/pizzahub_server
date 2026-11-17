@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 
 import {
@@ -15,6 +16,13 @@ import {
 
 import { uploadMenuImageController } from "../controllers/image.controller.js";
 
+import {
+  getVendorOrdersController,
+  acceptVendorOrderController,
+  rejectVendorOrderController,
+  updateVendorOrderStatusController,
+} from "../controllers/vendor-order.controller.js";
+
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { authorize } from "../middlewares/role.middleware.js";
 import { uploadMenuImage } from "../middlewares/upload.middleware.js";
@@ -23,22 +31,40 @@ const router = Router();
 
 router.use(authenticate, authorize("vendor"));
 
-// Restaurant Management
+// RESTAURANT MANAGEMENT
 router.post("/restaurant", createRestaurantController);
 router.get("/restaurant", getMyRestaurantController);
 router.patch("/restaurant", updateRestaurantController);
 
-// Image Upload
+// IMAGE UPLOAD
 router.post(
   "/upload-image",
   uploadMenuImage,
   uploadMenuImageController
 );
 
-// Menu Management
+// MENU MANAGEMENT
 router.post("/menu-items", createMenuItemController);
 router.get("/menu-items", getMyMenuItemsController);
 router.patch("/menu-items/:id", updateMenuItemController);
 router.delete("/menu-items/:id", deleteMenuItemController);
+
+// ORDER MANAGEMENT
+router.get("/orders", getVendorOrdersController);
+
+router.patch(
+  "/orders/:id/accept",
+  acceptVendorOrderController
+);
+
+router.patch(
+  "/orders/:id/reject",
+  rejectVendorOrderController
+);
+
+router.patch(
+  "/orders/:id/status",
+  updateVendorOrderStatusController
+);
 
 export default router;
