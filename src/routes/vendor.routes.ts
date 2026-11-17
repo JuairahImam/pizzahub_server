@@ -23,6 +23,10 @@ import {
   updateVendorOrderStatusController,
 } from "../controllers/vendor-order.controller.js";
 
+import {
+  createPremiumCheckoutController,
+} from "../controllers/stripe.controller.js";
+
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { authorize } from "../middlewares/role.middleware.js";
 import { uploadMenuImage } from "../middlewares/upload.middleware.js";
@@ -40,7 +44,7 @@ router.patch("/restaurant", updateRestaurantController);
 router.post(
   "/upload-image",
   uploadMenuImage,
-  uploadMenuImageController
+  uploadMenuImageController,
 );
 
 // MENU MANAGEMENT
@@ -52,19 +56,11 @@ router.delete("/menu-items/:id", deleteMenuItemController);
 // ORDER MANAGEMENT
 router.get("/orders", getVendorOrdersController);
 
-router.patch(
-  "/orders/:id/accept",
-  acceptVendorOrderController
-);
+router.patch("/orders/:id/accept", acceptVendorOrderController);
+router.patch("/orders/:id/reject", rejectVendorOrderController);
+router.patch("/orders/:id/status", updateVendorOrderStatusController);
 
-router.patch(
-  "/orders/:id/reject",
-  rejectVendorOrderController
-);
-
-router.patch(
-  "/orders/:id/status",
-  updateVendorOrderStatusController
-);
+// PREMIUM SUBSCRIPTION
+router.post("/premium/checkout", createPremiumCheckoutController);
 
 export default router;

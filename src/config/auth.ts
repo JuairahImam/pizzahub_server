@@ -14,10 +14,44 @@ export const auth = betterAuth({
         defaultValue: "customer",
         input: false,
       },
+
       isBlocked: {
         type: "boolean",
         required: false,
         defaultValue: false,
+        input: false,
+      },
+
+      // Premium subscription fields
+      isPremium: {
+        type: "boolean",
+        required: false,
+        defaultValue: false,
+        input: false,
+      },
+
+      subscriptionStatus: {
+        type: ["FREE", "ACTIVE", "CANCELLED", "PAST_DUE"],
+        required: false,
+        defaultValue: "FREE",
+        input: false,
+      },
+
+      stripeCustomerId: {
+        type: "string",
+        required: false,
+        input: false,
+      },
+
+      stripeSubscriptionId: {
+        type: "string",
+        required: false,
+        input: false,
+      },
+
+      premiumExpiresAt: {
+        type: "date",
+        required: false,
         input: false,
       },
     },

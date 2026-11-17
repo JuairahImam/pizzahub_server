@@ -7,6 +7,7 @@ import { toNodeHandler } from "better-auth/node";
 import connectDB from "./config/database.js";
 import { auth } from "./config/auth.js";
 import routes from "./routes/index.routes.js";
+import stripeWebhookRoutes from "./routes/stripe-webhook.routes.js";
 
 dotenv.config();
 
@@ -17,11 +18,18 @@ app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:3000",
     credentials: true,
-  })
+  }),
 );
 
 // Better Auth handler MUST come before express.json()
 app.all("/api/auth/{*any}", toNodeHandler(auth));
+
+// Stripe Webhook MUST come before express.json()
+app.use(
+  "/api/stripe",
+  express.raw({ type: "application/json" }),
+  stripeWebhookRoutes,
+);
 
 // JSON Middleware
 app.use(express.json());
@@ -58,7 +66,7 @@ app.get("/health", async (_req, res) => {
 });
 
 // Server Configuration
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Start Server
 const startServer = async () => {
