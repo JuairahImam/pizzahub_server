@@ -7,13 +7,12 @@ import {
   getMyOrderByIdController,
   cancelMyOrderController,
 } from "../controllers/order.controller.js";
-
-import { authenticate } from "../middlewares/auth.middleware.js";
+import { authenticateJWT } from "../middlewares/jwt.middleware.js";
 import { authorize } from "../middlewares/role.middleware.js";
 
 const router = Router();
 
-router.use(authenticate, authorize("customer"));
+router.use(authenticateJWT, authorize("customer"));
 
 // Customer Order Management
 router.post("/", createOrderController);
