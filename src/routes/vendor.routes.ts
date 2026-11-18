@@ -27,13 +27,13 @@ import {
   createPremiumCheckoutController,
 } from "../controllers/stripe.controller.js";
 
-import { authenticate } from "../middlewares/auth.middleware.js";
 import { authorize } from "../middlewares/role.middleware.js";
 import { uploadMenuImage } from "../middlewares/upload.middleware.js";
+import { authenticateJWT } from "../middlewares/jwt.middleware.js";
 
 const router = Router();
 
-router.use(authenticate, authorize("vendor"));
+router.use(authenticateJWT, authorize("vendor"));
 
 // RESTAURANT MANAGEMENT
 router.post("/restaurant", createRestaurantController);
