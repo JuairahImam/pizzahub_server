@@ -8,12 +8,13 @@ import {
   unblockUserController,
 } from "../controllers/admin.controller.js";
 
-import { authenticate } from "../middlewares/auth.middleware.js";
+
 import { authorize } from "../middlewares/role.middleware.js";
+import { authenticateJWT } from "../middlewares/jwt.middleware.js";
 
 const router = Router();
 
-router.use(authenticate, authorize("admin"));
+router.use(authenticateJWT, authorize("admin"));
 
 router.patch("/users/promote-vendor", promoteVendorController);
 router.get("/vendors", getAllVendorsController);
