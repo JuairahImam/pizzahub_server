@@ -526,6 +526,7 @@ export const getAdminDashboardOverview = async () => {
   const users = db.collection("user");
   const menuItems = db.collection("menuItems");
   const orders = db.collection("orders");
+  const transactions = db.collection("transactions");
 
   const [
     totalUsers,
@@ -547,6 +548,10 @@ export const getAdminDashboardOverview = async () => {
     deliveredOrderValueResult,
     recentOrders,
     recentMenuItemsRaw,
+    transactionsTotal,
+    transactionsByStatus,
+    transactionsByType,
+    transactionsPaidTotal,
   ] = await Promise.all([
     users.countDocuments(),
     users.countDocuments({ role: "customer" }),
@@ -605,6 +610,45 @@ export const getAdminDashboardOverview = async () => {
       .sort({ createdAt: -1 })
       .limit(5)
       .toArray(),
+    transactions.countDocuments(),
+    transactions
+      .aggregate([
+        {
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 },
+            paidTotal: {
+              $sum: { $cond: [{ $eq: ["$status", "PAID"] }, "$amount", 0] },
+            },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ])
+      .toArray(),
+    transactions
+      .aggregate([
+        {
+          $group: {
+            _id: "$transactionType",
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ])
+      .toArray(),
+    transactions
+      .aggregate([
+        {
+          $match: { status: "PAID" },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$amount" },
+          },
+        },
+      ])
+      .toArray(),
   ]);
 
   const recentMenuItems = await enrichMenuItems(recentMenuItemsRaw as any[]);
@@ -632,6 +676,22 @@ export const getAdminDashboardOverview = async () => {
       rejected: rejectedOrders,
       cancelled: cancelledOrders,
       deliveredOrderValue: deliveredOrderValueResult[0]?.total ?? 0,
+    },
+    transactions: {
+      total: transactionsTotal,
+      byStatus: Object.fromEntries(
+        (transactionsByStatus as any[]).map((row) => [
+          row._id as string,
+          row.count,
+        ])
+      ),
+      byType: Object.fromEntries(
+        (transactionsByType as any[]).map((row) => [
+          row._id as string,
+          row.count,
+        ])
+      ),
+      paidTotal: transactionsPaidTotal[0]?.total ?? 0,
     },
     recentOrders: recentOrders.map((order: any) => ({
       id: order._id.toString(),

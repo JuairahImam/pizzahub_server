@@ -1,1401 +1,314 @@
-# PizzaHub API
+# PizzaHub API — Backend README
 
-Backend API for **PizzaHub**, a pizza ordering and delivery platform. It powers public menu browsing, customer ordering, vendor restaurant and menu management, vendor order fulfillment, admin user management, ImgBB image uploads, and Stripe Premium subscriptions for vendors.
+PizzaHub backend is an Express 5, TypeScript, MongoDB official driver server using Better Auth + JWT for auth, role-based access control, Stripe for Premium subscriptions/payments, and ImgBB for image hosting.
 
-| Property | Value |
-| --- | --- |
-| **API version** | `1.0` |
-| **Runtime** | Node.js, Express 5, TypeScript |
-| **Database** | MongoDB |
-| **Authentication** | Better Auth + JWT |
-| **Payments** | Stripe |
-| **Image hosting** | ImgBB |
+Repository: `https://github.com/JuairahImam/pizzahub_server.git`
 
-## Live API
+Live API (verified): `https://pizzahub-server-toql.onrender.com`
 
-| Environment | Base URL |
-| --- | --- |
-| Local | `http://localhost:5001` |
-| Production | `https://pizzahub-server-toql.onrender.com` |
+## Overview
 
-All application endpoints are relative to the selected base URL.
+PizzaHub API powers:
 
-## Table of contents
+- Public real-time menu browsing for customers.
+- Customer order creation, history, details, and pending cancellation.
+- Vendor restaurant, menu item CRUD, order fulfillment, and Premium subscription flows.
+- Admin user management, menu moderation, and payment transaction records.
+- ImgBB uploads for vendor menu images and user profile images.
+- Stripe Checkout and signed webhook handling.
+- Health and root endpoints for deployment checks.
 
-- [Features](#features)
-- [Tech stack](#tech-stack)
-- [Project structure](#project-structure)
-- [Getting started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Environment variables](#environment-variables)
-  - [Run locally](#run-locally)
-  - [Build and run for production](#build-and-run-for-production)
-  - [Seed data](#seed-data)
-- [Authentication](#authentication)
-  - [Roles](#roles)
-  - [Getting a JWT](#getting-a-jwt)
-  - [Calling protected endpoints](#calling-protected-endpoints)
-- [API conventions](#api-conventions)
-- [Endpoints](#endpoints)
-  - [Health and root](#health-and-root)
-  - [Public menu](#public-menu)
-  - [Customer orders](#customer-orders)
-  - [Vendor restaurant](#vendor-restaurant)
-  - [Vendor image upload](#vendor-image-upload)
-  - [Vendor menu management](#vendor-menu-management)
-  - [Vendor order management](#vendor-order-management)
-  - [Vendor Premium checkout](#vendor-premium-checkout)
-  - [Stripe webhook](#stripe-webhook)
-  - [Admin](#admin)
-  - [Internal auth diagnostics](#internal-auth-diagnostics)
-- [Order status lifecycle](#order-status-lifecycle)
-- [Error handling](#error-handling)
-- [Deployment](#deployment)
-- [Troubleshooting](#troubleshooting)
-- [Known limitations](#known-limitations)
-- [Security notes](#security-notes)
-- [License](#license)
-
-## Features
-
-- Email/password and Google authentication through Better Auth.
-- JWT bearer authentication for protected application APIs.
-- Role-based access control for `customer`, `vendor`, and `admin` users.
-- Account blocking with immediate enforcement on protected APIs.
-- Public menu browsing with keyword search, category and price filters, sorting, and pagination.
-- Customer order creation, order history, order details, and pending-order cancellation.
-- One restaurant profile per vendor.
-- Vendor-owned menu item CRUD.
-- Vendor order acceptance, rejection, and fulfillment status transitions.
-- Menu image uploads to ImgBB with file type and size validation.
-- Stripe Premium subscription checkout for vendors with signed webhook handling.
-- Admin tools for vendor promotion, blocking, unblocking, and vendor listing.
-- Demo data seeding for local development.
-
-## Tech stack
+## Technology stack
 
 | Layer | Technology |
 | --- | --- |
 | Language | TypeScript |
 | Server | Express 5 |
-| Database | MongoDB (official `mongodb` driver) |
-| Authentication | Better Auth with the JWT plugin |
-| Token verification | `jose` + Better Auth JWKS |
-| Payments | Stripe Checkout and Stripe webhooks |
-| Image uploads | ImgBB |
-| File uploads | Multer (memory storage) |
-| Development runner | `tsx` |
+| Database | MongoDB official driver |
+| Auth | Better Auth with email/password and JWT plugin |
+| Token verification | `jose`, Better Auth JWKS |
+| Payments | Stripe Checkout and webhooks |
+| Image hosting | ImgBB |
+| Uploads | Multer memory storage |
+| Local runner | `tsx` |
 
 ## Project structure
 
 ```text
-pizzahub-server/
-├── src/
-│   ├── config/
-│   │   ├── auth.ts             # Better Auth configuration
-│   │   ├── database.ts         # MongoDB connection
-│   │   └── stripe.ts           # Stripe client
-│   ├── controllers/            # HTTP request handlers
-│   ├── middlewares/
-│   │   ├── auth.middleware.ts  # Session authentication
-│   │   ├── jwt.middleware.ts   # JWT authentication
-│   │   ├── role.middleware.ts  # Role authorization
-│   │   └── upload.middleware.ts # Multer image upload handling
-│   ├── routes/                 # Express route definitions
-│   ├── services/               # Database, Stripe, and ImgBB business logic
-│   ├── scripts/
-│   │   ├── seed-admin.ts       # Create or update the admin account
-│   │   └── seed-all.ts         # Create demo users, restaurant, menu, orders
-│   └── server.ts               # Application entry point
-├── dist/                       # Compiled JavaScript (generated by `npm run build`)
-├── .env.example                # Environment variable template
-├── package.json
-└── tsconfig.json
+src/
+├── config/
+│   ├── auth.ts
+│   ├── database.ts
+│   └── stripe.ts
+├── controllers/
+│   ├── admin-dashboard.controller.ts
+│   ├── admin-transaction.controller.ts
+│   ├── admin-users.controller.ts
+│   ├── admin.controller.ts
+│   ├── customer-menu.controller.ts
+│   ├── image.controller.ts
+│   ├── menu.controller.ts
+│   ├── order.controller.ts
+│   ├── profile.controller.ts
+│   ├── stripe-webhook.controller.ts
+│   ├── stripe.controller.ts
+│   ├── vendor-order.controller.ts
+│   └── vendor.controller.ts
+├── middlewares/
+│   ├── auth.middleware.ts
+│   ├── jwt.middleware.ts
+│   ├── role.middleware.ts
+│   └── upload.middleware.ts
+├── routes/
+│   ├── admin.routes.ts
+│   ├── index.routes.ts
+│   ├── menu.routes.ts
+│   ├── order.routes.ts
+│   ├── stripe-webhook.routes.ts
+│   ├── user.routes.ts
+│   └── vendor.routes.ts
+├── services/
+│   ├── admin.service.ts
+│   ├── customer-menu.service.ts
+│   ├── image.service.ts
+│   ├── menu.service.ts
+│   ├── order.service.ts
+│   ├── profile.service.ts
+│   ├── stripe-webhook.service.ts
+│   ├── stripe.service.ts
+│   ├── transaction.service.ts
+│   ├── vendor.service.ts
+│   └── ...
+├── scripts/
+│   ├── seed-admin.ts
+│   ├── seed-all.ts
+│   └── migrate-menu-approval.ts
+└── server.ts
 ```
 
-## Getting started
+## Required environment variables
 
-### Prerequisites
-
-- Node.js 20 or newer (recommended)
-- npm
-- A MongoDB database (MongoDB Atlas or a local MongoDB instance)
-- A Stripe secret key (required at startup), plus a recurring Premium price if testing subscriptions
-- An ImgBB API key, if testing image uploads
-- Google OAuth credentials, if testing Google sign-in
-
-### Installation
-
-```bash
-git clone <repository-url>
-cd pizzahub-server
-npm install
-cp .env.example .env
-```
-
-Fill in the values in `.env`, then start the development server:
-
-```bash
-npm run dev
-```
-
-The API runs at `http://localhost:5001` by default.
-
-### Environment variables
+Set values in the hosting provider; never commit real values.
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `PORT` | No | HTTP port. Defaults to `5001`. |
-| `NODE_ENV` | No | Environment name, for example `development` or `production`. |
-| `MONGODB_URI` | Yes | MongoDB connection string. The application uses the `pizzahub` database. |
-| `BETTER_AUTH_SECRET` | Yes | Secret used by Better Auth. Use a long, random value. |
-| `BETTER_AUTH_URL` | Yes | Public URL of this API, for example `http://localhost:5001`. Used as the JWT issuer/audience and to build the JWKS URL. |
-| `CLIENT_URL` | Yes | Frontend origin allowed by CORS. Also used for Stripe success and cancel redirects. |
+| `PORT` | No | HTTP port. Default `5001`. |
+| `NODE_ENV` | No | `development` or `production`. |
+| `MONGODB_URI` | Yes | MongoDB connection string; app uses `pizzahub` database. |
+| `BETTER_AUTH_SECRET` | Yes | Better Auth secret. Use a long random value. |
+| `BETTER_AUTH_URL` | Yes | Public API URL, e.g. `https://pizzahub-server-toql.onrender.com`. |
 | `GOOGLE_CLIENT_ID` | For Google login | Google OAuth client ID. |
 | `GOOGLE_CLIENT_SECRET` | For Google login | Google OAuth client secret. |
-| `STRIPE_SECRET_KEY` | Yes | Stripe secret key. Required at server startup by the Stripe client configuration. |
-| `STRIPE_WEBHOOK_SECRET` | For Premium checkout | Stripe signing secret for the webhook endpoint. |
-| `STRIPE_PREMIUM_PRICE_ID` | For Premium checkout | Stripe Price ID for the vendor Premium subscription. |
+| `STRIPE_SECRET_KEY` | Yes | Stripe API secret key. Required at startup. |
+| `STRIPE_WEBHOOK_SECRET` | For Premium checkout | Stripe signing secret for webhooks. |
+| `STRIPE_PREMIUM_PRICE_ID` | For Premium checkout | Recurring Premium price ID. |
 | `IMGBB_API_KEY` | For image uploads | ImgBB API key. |
-| `ADMIN_NAME` | For seeding | Admin display name. |
-| `ADMIN_EMAIL` | For seeding | Admin email address. |
-| `ADMIN_PASSWORD` | For seeding | Admin password. |
-| `VENDOR_NAME` | For `seed:all` | Demo vendor display name. |
-| `VENDOR_EMAIL` | For `seed:all` | Demo vendor email address. |
-| `VENDOR_PASSWORD` | For `seed:all` | Demo vendor password. |
-| `CUSTOMER_NAME` | For `seed:all` | Demo customer display name. |
-| `CUSTOMER_EMAIL` | For `seed:all` | Demo customer email address. |
-| `CUSTOMER_PASSWORD` | For `seed:all` | Demo customer password. |
+| `CLIENT_URL` | Yes | Frontend origin allowed by CORS and Stripe redirects. |
+| `ADMIN_NAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD` | For seeding | Demo admin account for `seed:admin`. |
+| `VENDOR_NAME` / `VENDOR_EMAIL` / `VENDOR_PASSWORD` | For `seed:all` | Demo vendor account. |
+| `CUSTOMER_NAME` / `CUSTOMER_EMAIL` / `CUSTOMER_PASSWORD` | For `seed:all` | Demo customer account. |
 
-> **Startup requirements:** The server reads `MONGODB_URI`, `BETTER_AUTH_URL`, and `STRIPE_SECRET_KEY` during startup and exits if they are missing. Set `BETTER_AUTH_SECRET` as well; it is required for secure Better Auth sessions and JWT signing.
+Do not expose MongoDB, Better Auth, Stripe, ImgBB, or production admin/customer/vendor secrets.
 
-> **Important:** `BETTER_AUTH_URL` must match the URL clients use to reach the API. If it changes between local and production, update it before starting the server. JWT verification uses this value as both the issuer and audience.
-
-### Run locally
+## Installation and local run
 
 ```bash
+npm install
+cp .env.example .env
+# Fill .env values, then:
 npm run dev
 ```
 
-`tsx watch` restarts the server when files in `src/` change.
+Local API: `http://localhost:5001`
 
-### Build and run for production
+## Build and production run
 
 ```bash
+npm install
 npm run build
 npm start
 ```
 
-`npm run build` compiles TypeScript to `dist/`. `npm start` runs `dist/server.js`, so always build before starting.
+Available scripts:
 
-### Seed data
+- `npm run dev`
+- `npm run build`
+- `npm start`
+- `npm run lint` — TypeScript check without emitting files.
+- `npm run seed:admin`
+- `npm run seed:all`
+- `npm run migrate:menu-approval`
 
-Create or update the admin account:
+## Authentication and roles
 
-```bash
-npm run seed:admin
-```
+- Better Auth handles email/password and social auth under `/api/auth/*`.
+- Protected APIs use JWT in `Authorization: Bearer <JWT>`.
+- New users default to `customer` role.
+- Roles: `customer`, `vendor`, `admin`.
+- Blocked users rejected by session and JWT middleware.
+- JWT verification uses Better Auth JWKS, issuer, and audience from `BETTER_AUTH_URL`.
 
-Create demo accounts, a restaurant, menu items, and sample orders:
+Role access:
 
-```bash
-npm run seed:all
-```
+- Customer: public menu, orders, profile.
+- Vendor: restaurant/menu/orders/premium.
+- Admin: users/menu moderation/transactions/dashboard.
 
-`seed:all` creates:
-
-- One admin, one vendor, and one customer account.
-- One demo restaurant owned by the vendor.
-- Five menu items: three pizzas, garlic bread, and a drink.
-- Two sample orders in `PENDING` status.
-
-The script checks for existing users, restaurant, menu items, and sample orders before inserting them, so it can be re-run during development.
-
-### Available scripts
-
-| Script | Description |
-| --- | --- |
-| `npm run dev` | Start the development server with `tsx watch`. |
-| `npm run build` | Compile TypeScript into `dist/`. |
-| `npm start` | Run the compiled server from `dist/server.js`. |
-| `npm run lint` | Run TypeScript type checking without emitting files. |
-| `npm run seed:admin` | Create or update the admin account. |
-| `npm run seed:all` | Seed demo users, restaurant, menu items, and orders. |
-
-## Authentication
-
-PizzaHub uses [Better Auth](https://www.better-auth.com/) for authentication and the Better Auth JWT plugin for protected API access.
-
-- Better Auth handles its own routes under `/api/auth/*`.
-- Protected application endpoints expect a JWT in the `Authorization` header.
-- New users are created with the `customer` role by default.
-- Roles cannot be set by clients during sign-up. An admin promotes customers to vendors.
-- Blocked users are rejected by both session and JWT authentication middleware.
-
-### Roles
-
-| Role | Description |
-| --- | --- |
-| `customer` | Browses the menu and manages personal orders. |
-| `vendor` | Manages a restaurant, menu items, and incoming orders. |
-| `admin` | Manages vendor accounts and administrative operations. |
-
-### Authentication endpoints
-
-| Method | Endpoint | Description | Access |
-| --- | --- | --- | --- |
-| `POST` | `/api/auth/sign-up/email` | Register with name, email, and password. | Public |
-| `POST` | `/api/auth/sign-in/email` | Sign in with email and password. | Public |
-| `POST` | `/api/auth/sign-out` | Sign out of the current session. | Authenticated session |
-| `GET` | `/api/auth/get-session` | Retrieve the current session. | Authenticated session |
-| `GET` | `/api/auth/token` | Obtain a JWT for protected API requests. | Authenticated session |
-| `GET` | `/api/auth/jwks` | Retrieve public keys used for JWT verification. | Public |
-
-Better Auth may expose additional framework-managed endpoints, including social sign-in routes when Google OAuth is configured. The table above lists the endpoints used by this API integration.
-
-### Getting a JWT
-
-1. Sign up or sign in and persist the Better Auth session cookie.
-
-```bash
-curl -c cookies.txt -X POST "http://localhost:5001/api/auth/sign-in/email" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "customer@example.com",
-    "password": "Password123!"
-  }'
-```
-
-2. Exchange the session for a JWT.
-
-```bash
-curl -b cookies.txt "http://localhost:5001/api/auth/token"
-```
-
-Example response:
-
-```json
-{
-  "token": "<JWT_TOKEN>"
-}
-```
-
-3. Send the token to protected application APIs.
-
-```bash
-curl "http://localhost:5001/api/orders/my" \
-  -H "Authorization: Bearer <JWT_TOKEN>"
-```
-
-From a browser-based frontend, send credentials when calling Better Auth endpoints so the session cookie is stored and reused:
-
-```js
-await fetch(`${BASE_URL}/api/auth/sign-in/email`, {
-  method: "POST",
-  credentials: "include",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ email, password }),
-});
-```
-
-### Calling protected endpoints
-
-Protected application endpoints require this header:
-
-```http
-Authorization: Bearer <JWT_TOKEN>
-```
-
-The server verifies the token against the Better Auth JWKS endpoint, checks the issuer and audience against `BETTER_AUTH_URL`, loads the current user from MongoDB, rejects blocked accounts, and then checks the required role.
-
-## API conventions
-
-- Application endpoints live under `/api`.
-- The root route and health check sit outside the `/api` router. The Stripe webhook is mounted separately at `/api/stripe/webhook` before the JSON body parser.
-- Request and response bodies use JSON unless the endpoint is a multipart upload.
-- Successful responses include `"success": true`.
-- Error responses include `"success": false` and a descriptive `"message"`.
-- MongoDB identifiers are strings in JSON responses.
-- Dates are serialized as ISO 8601 strings.
-
-Example error response:
-
-```json
-{
-  "success": false,
-  "message": "Order not found."
-}
-```
-
-Common status codes used by this API:
-
-| Status | Meaning |
-| --- | --- |
-| `200 OK` | Request completed successfully. |
-| `201 Created` | Resource created successfully. |
-| `400 Bad Request` | Invalid input, malformed identifier, or failed validation. |
-| `401 Unauthorized` | Missing, invalid, or expired authentication. |
-| `403 Forbidden` | The user lacks the required role, is blocked, or the action is not allowed. |
-| `404 Not Found` | The resource does not exist or is not accessible to the user. |
-| `409 Conflict` | A business rule conflict, such as a duplicate restaurant or an invalid order status transition. |
-| `500 Internal Server Error` | Unexpected server-side error. |
-| `502 Bad Gateway` | An upstream service, such as ImgBB, failed. |
-| `503 Service Unavailable` | The health check cannot reach MongoDB. |
-
-## Endpoints
-
-### Health and root
-
-| Method | Endpoint | Description | Access |
-| --- | --- | --- | --- |
-| `GET` | `/` | API welcome message. | Public |
-| `GET` | `/health` | API and MongoDB health check. | Public |
-
-`GET /` response:
-
-```json
-{
-  "success": true,
-  "message": "Welcome to PizzaHub API!"
-}
-```
-
-`GET /health` response when healthy:
-
-```json
-{
-  "success": true,
-  "message": "PizzaHub API is healthy",
-  "database": "connected"
-}
-```
-
-When MongoDB is unavailable, `/health` returns `503`:
-
-```json
-{
-  "success": false,
-  "message": "Database connection failed",
-  "database": "disconnected"
-}
-```
-
-### Public menu
-
-These endpoints do not require authentication. Only menu items with `isAvailable: true` are returned.
+## Public API
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/api/menu-items` | Retrieve approved and available menu items with filters and pagination. |
-| `GET` | `/api/menu-items/categories` | Retrieve available menu categories. |
-| `GET` | `/api/menu-items/:id` | Retrieve details for a single available menu item. |
+| `GET` | `/` | API welcome message |
+| `GET` | `/health` | MongoDB health check |
+| `GET` | `/api/menu-items` | Public approved/available items with search, category, location, price, sort, pagination |
+| `GET` | `/api/menu-items/categories` | Public available categories |
+| `GET` | `/api/menu-items/:id` | Public approved/available item details |
+| `GET` | `/api/users/me` | Authenticated user from session |
+| `GET` | `/api/users/jwt-me` | Authenticated user from JWT |
 
-#### List menu items
+Location filter example: `GET /api/menu-items?location=<real restaurant address text>`
 
-```http
-GET /api/menu-items?q=pizza&category=Pizza&minPrice=300&maxPrice=800&sort=price_asc&page=1&limit=12
-```
+## Customer APIs
 
-Query parameters:
-
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `q` | string | - | Case-insensitive search by menu item name. Maximum 100 characters. |
-| `category` | string | - | Case-insensitive exact category match. Maximum 60 characters. |
-| `minPrice` | number | - | Minimum price. Must be a non-negative number. |
-| `maxPrice` | number | - | Maximum price. Must be a non-negative number and greater than or equal to `minPrice`. |
-| `sort` | string | `newest` | One of `newest`, `price_asc`, or `price_desc`. |
-| `page` | integer | `1` | Page number. Must be positive. |
-| `limit` | integer | `12` | Results per page. Must be between `1` and `50`. |
-
-Example response:
-
-```json
-{
-  "success": true,
-  "menuItems": [
-    {
-      "_id": "665f1c2b8f1b2c0012a34567",
-      "restaurantId": "665f1c2b8f1b2c0012a34500",
-      "name": "Chicken BBQ Pizza",
-      "description": "BBQ chicken with mozzarella cheese.",
-      "category": "Pizza",
-      "price": 650,
-      "imageUrl": "https://example.com/pizza.jpg",
-      "isAvailable": true,
-      "createdAt": "2026-01-01T10:00:00.000Z",
-      "updatedAt": "2026-01-01T10:00:00.000Z",
-      "restaurant": {
-        "_id": "665f1c2b8f1b2c0012a34500",
-        "name": "PizzaHub Demo Restaurant",
-        "description": "Fresh and delicious pizzas for everyone.",
-        "address": "Dhanmondi, Dhaka, Bangladesh",
-        "phone": "01700000000",
-        "createdAt": "2026-01-01T09:00:00.000Z",
-        "updatedAt": "2026-01-01T09:00:00.000Z"
-      }
-    }
-  ],
-  "pagination": {
-    "total": 1,
-    "page": 1,
-    "limit": 12,
-    "totalPages": 1
-  }
-}
-```
-
-Public menu responses intentionally omit `vendorId` and `imageId`.
-
-#### List categories
-
-```http
-GET /api/menu-items/categories
-```
-
-Example response:
-
-```json
-{
-  "success": true,
-  "count": 3,
-  "categories": [
-    "Drinks",
-    "Pizza",
-    "Sides"
-  ]
-}
-```
-
-#### Get a single menu item
-
-```http
-GET /api/menu-items/:id
-```
-
-Example response:
-
-```json
-{
-  "success": true,
-  "menuItem": {
-    "_id": "665f1c2b8f1b2c0012a34567",
-    "restaurantId": "665f1c2b8f1b2c0012a34500",
-    "name": "Chicken BBQ Pizza",
-    "description": "BBQ chicken with mozzarella cheese.",
-    "category": "Pizza",
-    "price": 650,
-    "imageUrl": "https://example.com/pizza.jpg",
-    "isAvailable": true,
-    "createdAt": "2026-01-01T10:00:00.000Z",
-    "updatedAt": "2026-01-01T10:00:00.000Z",
-    "restaurant": {
-      "_id": "665f1c2b8f1b2c0012a34500",
-      "name": "PizzaHub Demo Restaurant",
-      "description": "Fresh and delicious pizzas for everyone.",
-      "address": "Dhanmondi, Dhaka, Bangladesh",
-      "phone": "01700000000",
-      "createdAt": "2026-01-01T09:00:00.000Z",
-      "updatedAt": "2026-01-01T09:00:00.000Z"
-    }
-  }
-}
-```
-
-Returns `400` for an invalid identifier and `404` when the item does not exist or is unavailable.
-
-### Customer orders
-
-All customer order endpoints require a valid JWT for a user with the `customer` role.
-
-| Method | Endpoint | Description |
+| Method | Endpoint | Access |
 | --- | --- | --- |
-| `POST` | `/api/orders` | Place a new order. |
-| `GET` | `/api/orders/my` | Retrieve the current customer's orders. |
-| `GET` | `/api/orders/:id` | Retrieve a specific order belonging to the customer. |
-| `PATCH` | `/api/orders/:id/cancel` | Cancel an eligible pending order. |
+| `POST /api/orders` | Order creation | JWT + customer |
+| `GET /api/orders/my` | Customer order history | JWT + customer |
+| `GET /api/orders/:id` | Customer order details | JWT + customer |
+| `PATCH /api/orders/:id/cancel` | Cancel eligible pending order | JWT + customer |
 
-#### Create an order
+Orders require authenticated customer role and real menu items available and approved. Orders are snapshot data; deleting menu items does not erase order history.
 
-```http
-POST /api/orders
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: application/json
-```
+## Vendor APIs
 
-Request body:
-
-```json
-{
-  "items": [
-    {
-      "menuItemId": "665f1c2b8f1b2c0012a34567",
-      "quantity": 2
-    },
-    {
-      "menuItemId": "665f1c2b8f1b2c0012a34568",
-      "quantity": 1
-    }
-  ],
-  "deliveryAddress": "House 10, Road 5, Dhanmondi, Dhaka",
-  "contactPhone": "+8801700000001"
-}
-```
-
-Validation rules:
-
-| Field | Rules |
-| --- | --- |
-| `items` | Array with 1 to 20 entries. Menu item IDs must be unique. |
-| `items[].menuItemId` | Valid MongoDB ObjectId string. |
-| `items[].quantity` | Integer from 1 to 20. |
-| `deliveryAddress` | String between 5 and 300 characters after trimming. |
-| `contactPhone` | String between 7 and 20 characters matching `[0-9+\-\s()]`. |
-
-Additional business rules:
-
-- Every menu item must exist and be available.
-- All items must belong to the same restaurant.
-- Prices and totals are calculated by the server from the current menu items. Client-supplied prices are not accepted.
-- New orders start with status `PENDING`.
-
-Example response (`201 Created`):
-
-```json
-{
-  "success": true,
-  "message": "Order created successfully.",
-  "order": {
-    "_id": "665f1c2b8f1b2c0012a99999",
-    "customerId": "665f1c2b8f1b2c0012a00001",
-    "customerName": "Customer One",
-    "customerEmail": "customer@example.com",
-    "vendorId": "665f1c2b8f1b2c0012a00002",
-    "restaurantId": "665f1c2b8f1b2c0012a34500",
-    "restaurantName": "PizzaHub Demo Restaurant",
-    "items": [
-      {
-        "menuItemId": "665f1c2b8f1b2c0012a34567",
-        "name": "Chicken BBQ Pizza",
-        "price": 650,
-        "quantity": 2,
-        "subtotal": 1300
-      },
-      {
-        "menuItemId": "665f1c2b8f1b2c0012a34568",
-        "name": "Coke",
-        "price": 60,
-        "quantity": 1,
-        "subtotal": 60
-      }
-    ],
-    "totalAmount": 1360,
-    "deliveryAddress": "House 10, Road 5, Dhanmondi, Dhaka",
-    "contactPhone": "+8801700000001",
-    "status": "PENDING",
-    "rejectionReason": null,
-    "createdAt": "2026-01-01T10:00:00.000Z",
-    "updatedAt": "2026-01-01T10:00:00.000Z"
-  }
-}
-```
-
-Possible `400` responses include:
-
-- `"Please provide between 1 and 20 order items."`
-- `"Invalid menu item or quantity."`
-- `"Delivery address must be between 5 and 300 characters."`
-- `"Please provide a valid contact phone number."`
-- `"One or more menu item IDs are invalid."`
-- `"One or more menu items are unavailable."`
-- `"You can order from only one restaurant at a time."`
-- `"Restaurant not found."`
-
-#### Get my orders
-
-```http
-GET /api/orders/my
-Authorization: Bearer <JWT_TOKEN>
-```
-
-Example response:
-
-```json
-{
-  "success": true,
-  "count": 0,
-  "orders": []
-}
-```
-
-Orders are sorted by newest first.
-
-#### Get one of my orders
-
-```http
-GET /api/orders/:id
-Authorization: Bearer <JWT_TOKEN>
-```
-
-Returns `{ "success": true, "order": { ... } }` when the order belongs to the authenticated customer. Returns `400` for an invalid identifier and `404` when the order does not exist or belongs to another customer.
-
-#### Cancel an order
-
-```http
-PATCH /api/orders/:id/cancel
-Authorization: Bearer <JWT_TOKEN>
-```
-
-Only orders with status `PENDING` can be cancelled. The order is updated to `CANCELLED`.
-
-Example response:
-
-```json
-{
-  "success": true,
-  "message": "Order cancelled successfully.",
-  "order": {}
-}
-```
-
-Returns `409` when the order is no longer pending and `404` when the order is not found.
-
-### Vendor restaurant
-
-All vendor endpoints require a valid JWT for a user with the `vendor` role. Each vendor can have exactly one restaurant profile.
-
-| Method | Endpoint | Description |
+| Method | Endpoint | Access |
 | --- | --- | --- |
-| `POST` | `/api/vendor/restaurant` | Create the vendor's restaurant profile. |
-| `GET` | `/api/vendor/restaurant` | Retrieve the vendor's restaurant profile. |
-| `PATCH` | `/api/vendor/restaurant` | Update the vendor's restaurant profile. |
+| `POST /api/vendor/restaurant` | Create restaurant | JWT + vendor |
+| `GET /api/vendor/restaurant` | Get own restaurant | JWT + vendor |
+| `PATCH /api/vendor/restaurant` | Update own restaurant | JWT + vendor |
+| `POST /api/vendor/upload-image` | ImgBB menu image upload | JWT + vendor |
+| `POST /api/vendor/menu-items` | Create menu item | JWT + vendor |
+| `GET /api/vendor/menu-items` | List own menu items | JWT + vendor |
+| `PATCH /api/vendor/menu-items/:id` | Update own menu item | JWT + vendor |
+| `DELETE /api/vendor/menu-items/:id` | Delete own menu item | JWT + vendor |
+| `GET /api/vendor/orders` | List vendor orders | JWT + vendor |
+| `PATCH /api/vendor/orders/:id/accept` | Accept pending order | JWT + vendor |
+| `PATCH /api/vendor/orders/:id/reject` | Reject pending order | JWT + vendor |
+| `PATCH /api/vendor/orders/:id/status` | Fulfillment status transition | JWT + vendor |
+| `POST /api/vendor/premium/checkout` | Create Stripe Premium checkout | JWT + vendor |
 
-#### Create a restaurant
+Free vendors can have at most 3 active menu items. Premium vendors have unlimited active items according to subscription state.
 
-```http
-POST /api/vendor/restaurant
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: application/json
-```
+## Admin APIs
 
-Request body:
-
-```json
-{
-  "name": "PizzaHub Demo Restaurant",
-  "description": "Fresh and delicious pizzas for everyone.",
-  "address": "Dhanmondi, Dhaka, Bangladesh",
-  "phone": "01700000000"
-}
-```
-
-All four fields are required and must be non-empty strings.
-
-Example response (`201 Created`):
-
-```json
-{
-  "success": true,
-  "message": "Restaurant created successfully.",
-  "restaurant": {
-    "_id": "665f1c2b8f1b2c0012a34500",
-    "vendorId": "665f1c2b8f1b2c0012a00002",
-    "name": "PizzaHub Demo Restaurant",
-    "description": "Fresh and delicious pizzas for everyone.",
-    "address": "Dhanmondi, Dhaka, Bangladesh",
-    "phone": "01700000000",
-    "createdAt": "2026-01-01T09:00:00.000Z",
-    "updatedAt": "2026-01-01T09:00:00.000Z"
-  }
-}
-```
-
-Returns `409` if the vendor already has a restaurant.
-
-#### Get my restaurant
-
-```http
-GET /api/vendor/restaurant
-Authorization: Bearer <JWT_TOKEN>
-```
-
-Returns `{ "success": true, "restaurant": { ... } }` or `404` if no profile exists.
-
-#### Update my restaurant
-
-```http
-PATCH /api/vendor/restaurant
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: application/json
-```
-
-Send one or more of `name`, `description`, `address`, and `phone`:
-
-```json
-{
-  "description": "Now serving late-night pizza.",
-  "phone": "01700000001"
-}
-```
-
-Each provided field must be a non-empty string. Returns `400` when no valid field is supplied and `404` when the restaurant profile does not exist yet.
-
-### Vendor image upload
-
-Upload a menu image to ImgBB. Requires a vendor JWT.
-
-```http
-POST /api/vendor/upload-image
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: multipart/form-data
-```
-
-| Form field | Type | Description |
+| Method | Endpoint | Access |
 | --- | --- | --- |
-| `image` | file | The image file to upload. |
+| `GET /api/admin/dashboard/overview` | Admin dashboard overview | JWT + admin |
+| `GET /api/admin/vendors` | List vendors | JWT + admin |
+| `PATCH /api/admin/users/promote-vendor` | Promote customer to vendor | JWT + admin |
+| `GET /api/admin/users` | List users with search/role/status/pagination | JWT + admin |
+| `GET /api/admin/users/:id` | User details | JWT + admin |
+| `PATCH /api/admin/users/block` | Block user | JWT + admin |
+| `PATCH /api/admin/users/unblock` | Unblock user | JWT + admin |
+| `GET /api/admin/menu-items` | List menu moderation items | JWT + admin |
+| `GET /api/admin/menu-items/:id` | Menu item details | JWT + admin |
+| `PATCH /api/admin/menu-items/:id/approve` | Approve menu item | JWT + admin |
+| `PATCH /api/admin/menu-items/:id/reject` | Reject menu item with reason | JWT + admin |
+| `DELETE /api/admin/menu-items/:id` | Delete menu item | JWT + admin |
+| `GET /api/admin/transactions` | List payment transactions | JWT + admin |
+| `GET /api/admin/transactions/:id` | Transaction details | JWT + admin |
 
-Supported formats: JPG/JPEG, PNG, and WEBP. Maximum file size: 5 MB.
+Admin menu moderation supports status, vendor, category, search, pagination. Approve/reject record review status; editing content resets approval; availability-only changes preserve approval.
 
-Example cURL request:
+Admin transactions support search by customer email, vendor ID, transaction/Stripe identifiers, status, type, and date range.
 
-```bash
-curl -X POST "https://pizzahub-server-toql.onrender.com/api/vendor/upload-image" \
-  -H "Authorization: Bearer <JWT_TOKEN>" \
-  -F "image=@pizza.jpg"
-```
+## User profile and image APIs
 
-Example response (`201 Created`):
-
-```json
-{
-  "success": true,
-  "message": "Image uploaded successfully.",
-  "image": {
-    "id": "IMGBB_IMAGE_ID",
-    "title": "pizza",
-    "imageUrl": "https://...",
-    "displayUrl": "https://...",
-    "size": 123456
-  }
-}
-```
-
-Use the returned `imageUrl` and `id` as `imageUrl` and `imageId` when creating or updating a menu item.
-
-Returns `400` when no file is provided, the file type is unsupported, or the file exceeds 5 MB. Returns `502` when the upstream ImgBB request fails.
-
-> **Known issue:** The image upload integration is implemented, but the latest local test returned HTTP `502`. Verify a successful upload in the target environment before relying on it in production.
-
-### Vendor menu management
-
-All endpoints require a vendor JWT. Vendors can only read and modify menu items that belong to them. A restaurant profile must exist before creating a menu item.
-
-| Method | Endpoint | Description |
+| Method | Endpoint | Access |
 | --- | --- | --- |
-| `POST` | `/api/vendor/menu-items` | Create a menu item. |
-| `GET` | `/api/vendor/menu-items` | Retrieve the vendor's menu items. |
-| `PATCH` | `/api/vendor/menu-items/:id` | Update a menu item. |
-| `DELETE` | `/api/vendor/menu-items/:id` | Delete a menu item. |
-
-#### Create a menu item
-
-```http
-POST /api/vendor/menu-items
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: application/json
-```
-
-Request body:
-
-```json
-{
-  "name": "Chicken BBQ Pizza",
-  "description": "BBQ chicken with mozzarella cheese.",
-  "category": "Pizza",
-  "price": 650,
-  "imageUrl": "https://example.com/pizza.jpg",
-  "imageId": "IMGBB_IMAGE_ID",
-  "isAvailable": true
-}
-```
-
-Validation rules:
-
-- `name`, `description`, `category`, `imageUrl`, and `imageId` must be non-empty strings.
-- `price` must be a positive number.
-- `imageUrl` must be a valid HTTPS URL.
-- `isAvailable` is optional and must be a boolean when provided. It defaults to `true`.
-
-Example response (`201 Created`):
-
-```json
-{
-  "success": true,
-  "message": "Menu item created successfully.",
-  "menuItem": {
-    "_id": "665f1c2b8f1b2c0012a34567",
-    "vendorId": "665f1c2b8f1b2c0012a00002",
-    "restaurantId": "665f1c2b8f1b2c0012a34500",
-    "name": "Chicken BBQ Pizza",
-    "description": "BBQ chicken with mozzarella cheese.",
-    "category": "Pizza",
-    "price": 650,
-    "imageUrl": "https://example.com/pizza.jpg",
-    "imageId": "IMGBB_IMAGE_ID",
-    "isAvailable": true,
-    "approvalStatus": "PENDING",
-    "rejectionReason": null,
-    "reviewedAt": null,
-    "reviewedBy": null,
-    "createdAt": "2026-01-01T10:00:00.000Z",
-    "updatedAt": "2026-01-01T10:00:00.000Z"
-  }
-}
-```
-
-Returns `404` if the vendor has not created a restaurant profile yet.
-
-Free vendors may have at most 3 active menu items. Active items are available items with `PENDING` or `APPROVED` approval status. Rejected items do not count. Premium vendors with a currently valid subscription have no active-item limit. Existing over-limit Free vendors are grandfathered.
-
-#### Get my menu items
-
-```http
-GET /api/vendor/menu-items
-Authorization: Bearer <JWT_TOKEN>
-```
-
-Example response:
-
-```json
-{
-  "success": true,
-  "count": 0,
-  "menuItems": []
-}
-```
-
-Items are sorted by newest first and include vendor-only fields such as `vendorId` and `imageId`.
-
-#### Update a menu item
-
-```http
-PATCH /api/vendor/menu-items/:id
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: application/json
-```
-
-Send one or more supported fields:
-
-```json
-{
-  "price": 700,
-  "isAvailable": false
-}
-```
-
-Supported fields: `name`, `description`, `category`, `price`, `imageUrl`, `imageId`, and `isAvailable`.
-
-Returns `400` for invalid values or when no supported field is provided. Returns `404` when the item does not exist or belongs to another vendor.
-
-#### Delete a menu item
-
-```http
-DELETE /api/vendor/menu-items/:id
-Authorization: Bearer <JWT_TOKEN>
-```
-
-Example response:
-
-```json
-{
-  "success": true,
-  "message": "Menu item deleted successfully."
-}
-```
-
-Returns `404` when the item does not exist or belongs to another vendor.
-
-### Vendor order management
-
-All endpoints require a vendor JWT. Vendors can only access orders associated with their own restaurant.
-
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/api/vendor/orders` | Retrieve incoming vendor orders. |
-| `PATCH` | `/api/vendor/orders/:id/accept` | Accept a pending order. |
-| `PATCH` | `/api/vendor/orders/:id/reject` | Reject a pending order. |
-| `PATCH` | `/api/vendor/orders/:id/status` | Update an order's fulfillment status. |
-
-#### Get vendor orders
-
-```http
-GET /api/vendor/orders
-Authorization: Bearer <JWT_TOKEN>
-```
-
-Example response:
-
-```json
-{
-  "success": true,
-  "count": 0,
-  "orders": []
-}
-```
-
-Orders are sorted by newest first.
-
-#### Accept an order
-
-```http
-PATCH /api/vendor/orders/:id/accept
-Authorization: Bearer <JWT_TOKEN>
-```
-
-Only `PENDING` orders can be accepted. The order moves to `CONFIRMED`.
-
-Example response:
-
-```json
-{
-  "success": true,
-  "message": "Order accepted successfully.",
-  "order": {}
-}
-```
-
-Returns `409` when the order is not pending and `404` when it is not found.
-
-#### Reject an order
-
-```http
-PATCH /api/vendor/orders/:id/reject
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: application/json
-```
-
-Request body:
-
-```json
-{
-  "rejectionReason": "Currently unable to process this order."
-}
-```
-
-`rejectionReason` must be a string between 3 and 300 characters. Only `PENDING` orders can be rejected. The order moves to `REJECTED`.
-
-Example response:
-
-```json
-{
-  "success": true,
-  "message": "Order rejected successfully.",
-  "order": {}
-}
-```
-
-Returns `409` when the order is not pending and `404` when it is not found.
-
-#### Update fulfillment status
-
-```http
-PATCH /api/vendor/orders/:id/status
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: application/json
-```
-
-Request body:
-
-```json
-{
-  "status": "PREPARING"
-}
-```
-
-Accepted values for this endpoint: `PREPARING`, `OUT_FOR_DELIVERY`, and `DELIVERED`.
-
-The API enforces these transitions:
-
-```text
-CONFIRMED -> PREPARING -> OUT_FOR_DELIVERY -> DELIVERED
-```
-
-Example response:
-
-```json
-{
-  "success": true,
-  "message": "Order status updated successfully.",
-  "order": {}
-}
-```
-
-Returns `400` for an unsupported status value, `409` for an invalid transition, and `404` when the order is not found.
-
-### Vendor Premium checkout
-
-Create a Stripe Checkout session for the vendor Premium subscription.
-
-```http
-POST /api/vendor/premium/checkout
-Authorization: Bearer <JWT_TOKEN>
-```
-
-No request body is required.
-
-Example response:
-
-```json
-{
-  "success": true,
-  "message": "Premium checkout session created successfully.",
-  "data": {
-    "sessionId": "cs_test_...",
-    "checkoutUrl": "https://checkout.stripe.com/..."
-  }
-}
-```
-
-Redirect the vendor to `data.checkoutUrl` to complete the Stripe Checkout flow. On success, Stripe redirects to:
-
-```text
-${CLIENT_URL}/vendor/premium/success?session_id={CHECKOUT_SESSION_ID}
-```
-
-On cancellation, Stripe redirects to:
-
-```text
-${CLIENT_URL}/vendor/premium/cancel
-```
-
-Possible errors:
-
-| Status | Message | Cause |
-| --- | --- | --- |
-| `403` | `Blocked users cannot subscribe.` | The vendor account is blocked. |
-| `404` | `Vendor not found.` | The authenticated user is not a vendor. |
-| `409` | `You already have an active Premium subscription.` | The vendor is already Premium. |
-| `400` | `Invalid user ID.` | The JWT subject is not a valid MongoDB ObjectId. |
-| `500` | `Failed to create Premium checkout session.` | Stripe or configuration failure. |
-
-The checkout flow requires `STRIPE_SECRET_KEY`, `STRIPE_PREMIUM_PRICE_ID`, and `CLIENT_URL` to be configured.
-
-### Stripe webhook
-
-Stripe sends subscription lifecycle events to this endpoint. It is not authenticated with a JWT. Instead, the endpoint verifies the `stripe-signature` header using `STRIPE_WEBHOOK_SECRET`.
-
-```http
-POST /api/stripe/webhook
-Content-Type: application/json
-Stripe-Signature: <signature>
-```
-
-The route is registered with `express.raw()` before the JSON body parser so the raw request body is available for signature verification.
-
-Handled events:
-
-| Event | Effect |
-| --- | --- |
-| `checkout.session.completed` | Activates Premium for subscription checkouts and one-time paid checkouts. |
-| `customer.subscription.updated` | Updates `isPremium`, `subscriptionStatus`, `stripeSubscriptionId`, and `premiumExpiresAt`. |
-| `customer.subscription.deleted` | Marks the subscription as cancelled or inactive. |
-| `invoice.payment_failed` | Sets `isPremium` to `false` and `subscriptionStatus` to `PAST_DUE`. |
-
-Example success response:
-
-```json
-{
-  "success": true,
-  "received": true
-}
-```
-
-Returns `400` when the signature or webhook secret is missing, or when signature verification fails. Returns `500` when event processing fails.
-
-For local development with the Stripe CLI:
-
-```bash
-stripe listen --forward-to localhost:5001/api/stripe/webhook
-```
-
-Use the signing secret printed by the CLI as `STRIPE_WEBHOOK_SECRET`.
-
-> **Verification note:** Confirm the Stripe checkout and verified webhook lifecycle in the target environment before treating subscription activation as production-ready.
-
-### Admin
-
-All admin endpoints require a valid JWT for a user with the `admin` role.
-
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/api/admin/vendors` | Retrieve vendor accounts. |
-| `PATCH` | `/api/admin/users/promote-vendor` | Promote a customer to vendor. |
-| `PATCH` | `/api/admin/users/block` | Block a user. |
-| `PATCH` | `/api/admin/users/unblock` | Unblock a user. |
-
-#### List vendors
-
-```http
-GET /api/admin/vendors
-Authorization: Bearer <JWT_TOKEN>
-```
-
-Example response:
-
-```json
-{
-  "success": true,
-  "count": 1,
-  "vendors": [
-    {
-      "id": "665f1c2b8f1b2c0012a00002",
-      "name": "Vendor One",
-      "email": "vendor@example.com",
-      "image": null,
-      "emailVerified": false,
-      "isBlocked": false,
-      "createdAt": "2026-01-01T09:00:00.000Z",
-      "updatedAt": "2026-01-01T09:00:00.000Z",
-      "role": "vendor"
-    }
-  ]
-}
-```
-
-This endpoint returns vendor user accounts, not restaurant profiles.
-
-#### Promote a customer to vendor
-
-```http
-PATCH /api/admin/users/promote-vendor
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: application/json
-```
-
-Request body:
-
-```json
-{
-  "email": "customer@example.com"
-}
-```
-
-Only customers can be promoted. Admins, existing vendors, blocked users, and users with other roles cannot be promoted.
-
-Example response:
-
-```json
-{
-  "success": true,
-  "message": "Customer successfully promoted to vendor."
-}
-```
-
-Possible errors: `404` user not found, `403` admin or blocked user, `409` already a vendor, `400` invalid role.
-
-#### Block a user
-
-```http
-PATCH /api/admin/users/block
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: application/json
-```
-
-Request body:
-
-```json
-{
-  "email": "customer@example.com"
-}
-```
-
-Admins cannot block themselves or another admin. Blocked users are denied access to protected application APIs.
-
-Example response:
-
-```json
-{
-  "success": true,
-  "message": "User blocked successfully."
-}
-```
-
-#### Unblock a user
-
-```http
-PATCH /api/admin/users/unblock
-Authorization: Bearer <JWT_TOKEN>
-Content-Type: application/json
-```
-
-Request body:
-
-```json
-{
-  "email": "customer@example.com"
-}
-```
-
-Example response:
-
-```json
-{
-  "success": true,
-  "message": "User unblocked successfully."
-}
-```
-
-Admin accounts cannot be modified through the block or unblock endpoints.
-
-### Admin menu moderation
-
-All endpoints require an admin JWT. Admins can review and moderate vendor menu items.
-
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/api/admin/menu-items` | List menu items for moderation. |
-| `GET` | `/api/admin/menu-items/:id` | Retrieve one menu item for moderation. |
-| `PATCH` | `/api/admin/menu-items/:id/approve` | Approve a menu item. |
-| `PATCH` | `/api/admin/menu-items/:id/reject` | Reject a menu item with a reason. |
-
-Query parameters for `GET /api/admin/menu-items`:
-- `status`: `PENDING`, `APPROVED`, or `REJECTED`
-- `vendorId`: vendor ObjectId
-- `category`
-- `q`: search by name or description
-- `page`: positive integer, default `1`
-- `limit`: 1 to 100, default `20`
-
-Reject request body:
-
-```json
-{
-  "rejectionReason": "Image does not match the item description."
-}
-```
-
-Rejection reason must be between 3 and 300 characters after trimming.
-
-Approving an item sets `approvalStatus` to `APPROVED`, clears `rejectionReason`, and records `reviewedAt` and `reviewedBy`. Rejecting sets `approvalStatus` to `REJECTED` and stores the validated reason. Re-review is supported by calling either endpoint again.
-
-### Internal auth diagnostics
-
-The following routes exist for development and authentication testing. They are not part of the frontend API contract and should not be relied on by clients.
-
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/api/users/me` | Return the authenticated user from a Better Auth session. |
-| `GET` | `/api/users/jwt-me` | Return the authenticated user from a JWT. |
-| `GET` | `/api/users/vendor-test` | Session-authenticated vendor/admin role test. |
-| `GET` | `/api/users/jwt-vendor-test` | JWT-authenticated vendor/admin role test. |
-
-## Order status lifecycle
-
-```text
-PENDING
-├── accept ──────> CONFIRMED ──> PREPARING ──> OUT_FOR_DELIVERY ──> DELIVERED
-├── reject ──────> REJECTED
-└── cancel ──────> CANCELLED
-```
-
-| Status | Set by | Meaning |
-| --- | --- | --- |
-| `PENDING` | System on order creation | Waiting for vendor action. |
-| `CONFIRMED` | Vendor accept | Vendor accepted the order. |
-| `PREPARING` | Vendor status update | Order is being prepared. |
-| `OUT_FOR_DELIVERY` | Vendor status update | Order is on the way. |
-| `DELIVERED` | Vendor status update | Order was delivered. |
-| `REJECTED` | Vendor reject | Vendor rejected the order and supplied a reason. |
-| `CANCELLED` | Customer cancel | Customer cancelled a pending order. |
-
-## Error handling
-
-Errors use a consistent JSON shape:
-
-```json
-{
-  "success": false,
-  "message": "Human-readable explanation."
-}
-```
-
-Validation is performed in the controllers before database operations. Business rule conflicts such as duplicate restaurants, duplicate vendor promotion, or invalid order status transitions return `409 Conflict`. Database and unexpected failures return `500 Internal Server Error`. ImgBB failures return `502 Bad Gateway`.
-
-## Deployment
-
-The production deployment is hosted on Render:
-
-```text
-https://pizzahub-server-toql.onrender.com
-```
-
-Recommended Render settings:
-
-| Setting | Value |
-| --- | --- |
-| Build command | `npm install && npm run build` |
-| Start command | `npm start` |
-| Health check path | `/health` |
-
-Set every required environment variable in the hosting provider. In particular:
-
-- `BETTER_AUTH_URL` must be the deployed API URL, not the frontend URL.
-- `CLIENT_URL` must be the deployed frontend origin, without a trailing slash.
-- `MONGODB_URI` must allow connections from the hosting environment.
-- `STRIPE_WEBHOOK_SECRET` must match the webhook endpoint configured in Stripe.
-- `STRIPE_PREMIUM_PRICE_ID` must reference the recurring Premium price.
-- `IMGBB_API_KEY` must be valid for the target environment.
-
-Configure the Stripe webhook endpoint as:
-
-```text
-https://pizzahub-server-toql.onrender.com/api/stripe/webhook
-```
-
-Subscribe it to the events listed in the [Stripe webhook](#stripe-webhook) section.
-
-Because the server uses `CLIENT_URL` as the CORS origin with credentials enabled, the frontend must be served from exactly that origin. Update `CLIENT_URL` whenever the frontend domain changes.
-
-## Troubleshooting
-
-| Symptom | Likely cause | Fix |
-| --- | --- | --- |
-| `401 Bearer token is required.` | The request is missing the `Authorization` header. | Send `Authorization: Bearer <JWT_TOKEN>`. |
-| `401 Invalid or expired JWT.` | The token expired, or `BETTER_AUTH_URL` changed. | Request a fresh token and confirm `BETTER_AUTH_URL` matches the API URL. |
-| `403 Forbidden. You don't have permission.` | The user has the wrong role for the endpoint. | Use a JWT for the correct role. |
-| `403 Your account has been blocked.` | The account is blocked. | Ask an admin to unblock the account. |
-| `404 Restaurant profile not found.` | A vendor tried to create a menu item before creating a restaurant. | Call `POST /api/vendor/restaurant` first. |
-| `409 You have already created a restaurant.` | Each vendor can have only one restaurant. | Use `GET` or `PATCH /api/vendor/restaurant`. |
-| `409 Invalid order status transition.` | The requested status does not follow the allowed lifecycle. | Follow the transition order in [Order status lifecycle](#order-status-lifecycle). |
-| `502 Failed to upload image. Please try again.` | ImgBB rejected the request or is unavailable. | Verify `IMGBB_API_KEY` and retry the upload. |
-| `/health` returns `503` | MongoDB is unreachable. | Check `MONGODB_URI`, database status, and network access. |
-| CORS error in the browser | `CLIENT_URL` does not match the frontend origin. | Set `CLIENT_URL` to the exact frontend origin and restart the server. |
-
-## Known limitations
-
-- This document reflects the current codebase. Verify endpoints and business rules in the target environment before relying on them in production.
-- No automated test suite is included. Use the seed scripts and the examples in this README for manual verification.
-- The ImgBB image upload flow requires a successful end-to-end test in the target environment. A local test returned `502`.
-- Stripe Premium checkout and webhook activation should be verified end-to-end in the target environment before production use.
-- The following workflows do not have confirmed API endpoints in this codebase:
-  - Admin menu moderation
-  - Dashboard statistics
-  - Transaction listing
-  - Profile management
-  - Subscription cancellation or status endpoints
-- The `/api/users/*` routes are authentication diagnostics, not public application APIs.
+| `GET /api/users/profile` | Get profile | JWT |
+| `PATCH /api/users/profile` | Update name | JWT |
+| `POST /api/users/profile/image` | Upload profile image to ImgBB | JWT |
+
+Only `name` and image upload are supported. Email and privileged fields are read-only. Profile image upload is multipart/form-data with field `image`; response includes `user.image` and `image`.
+
+## Stripe Premium and webhook
+
+### Checkout
+
+- `POST /api/vendor/premium/checkout`
+- Requires authenticated vendor JWT.
+- Creates Stripe Checkout session for the authenticated vendor.
+- Requires `STRIPE_SECRET_KEY`, `STRIPE_PREMIUM_PRICE_ID`, and `CLIENT_URL`.
+- Success redirect: `${CLIENT_URL}/vendor/premium/success?session_id={CHECKOUT_SESSION_ID}`
+- Cancel redirect: `${CLIENT_URL}/vendor/premium/cancel`
+
+### Webhook
+
+- `POST /api/stripe/webhook`
+- Uses raw body and `stripe-signature` header with `STRIPE_WEBHOOK_SECRET`.
+- Handles `invoice.paid` and `invoice.payment_failed` as authoritative payment events.
+- Updates subscription entitlement and persists transaction records.
+- Duplicate webhook delivery is idempotent via unique Stripe invoice index.
+
+### Transactions
+
+`transactions` stores:
+
+- `vendorId`, `userId`, `customerEmail`
+- `stripeCustomerId`, `stripeSubscriptionId`, `stripeInvoiceId`, `stripePaymentIntentId`
+- `amount` in Stripe minor units, `currency`
+- `status` (`PAID`/`FAILED`), `transactionType`
+- `plan`, `billingReason`, `paidAt`, `transactionDate`
+- `createdAt`, `updatedAt`
+
+Do not store card numbers, CVCs, secrets, or sensitive payment credentials.
+
+## Database collections and relationships
+
+Important collections:
+
+- `user` — Better Auth users, roles, blocked state, Premium fields.
+- `restaurants` — restaurant profile, address, phone.
+- `menuItems` — item content, images, availability, approval status, vendor/restaurant references.
+- `orders` — customer orders, items, totals, status.
+- `transactions` — Stripe Premium transaction records.
+- `vendorMenuLocks` — concurrency locks for vendor menu operations.
+
+Relationships:
+- `menuItems.vendorId -> user._id`
+- `menuItems.restaurantId -> restaurants._id`
+- `orders.customerId -> user._id`
+- `orders.vendorId -> user._id`
+- `orders.restaurantId -> restaurants._id`
+- `restaurants.vendorId -> user._id`
+- `transactions.vendorId -> user._id`
 
 ## Security notes
 
-- Never expose `MONGODB_URI`, `BETTER_AUTH_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `IMGBB_API_KEY`, or OAuth client secrets in frontend code.
-- Protected application APIs verify JWTs against the Better Auth JWKS endpoint and load the current user from MongoDB on every request.
-- Blocked users are rejected even if they hold a valid token.
-- Role checks are enforced server-side. Hiding UI controls is not sufficient.
-- Stripe webhook payloads are verified with the signing secret before processing.
-- Use HTTPS and a strong `BETTER_AUTH_SECRET` in production.
-- Consider adding rate limiting at the reverse proxy or hosting platform level for production traffic.
+- Private secrets are only allowed in environment variables/hosting settings.
+- No secrets are committed; `.env` is ignored.
+- JWT verification is performed on every protected API call.
+- Blocked users cannot access protected application APIs.
+- Admin endpoints require admin role and JWT.
+- Vendor endpoints require vendor role and JWT; vendors can only access their own data.
+- Stripe webhook signatures are verified before processing.
+- Stripe amounts/currency are taken from authoritative Stripe invoice data, not client input.
 
-## License
+## Deployment
 
-ISC
+Recommended Render settings:
+
+```text
+Build command: npm install && npm run build
+Start command: npm start
+Health check path: /health
+```
+
+Deployment checklist:
+- Set all required environment variables in the hosting provider.
+- `BETTER_AUTH_URL` must match the deployed API URL.
+- `CLIENT_URL` must match deployed frontend origin exactly.
+- Configure Stripe production webhook endpoint: `https://pizzahub-server-toql.onrender.com/api/stripe/webhook`
+- Verify `/health` and public menu endpoint.
+- Do not make real charges in staging.

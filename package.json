@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "lint": "tsc --noEmit",
     "seed:admin": "tsx src/scripts/seed-admin.ts",
-    "seed:all": "tsx src/scripts/seed-all.ts"
+    "seed:all": "tsx src/scripts/seed-all.ts",
+    "migrate:menu-approval": "tsx src/scripts/migrate-menu-approval.ts"
   },
   "keywords": [],
   "author": "",

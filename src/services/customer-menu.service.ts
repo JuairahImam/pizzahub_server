@@ -6,6 +6,7 @@ export interface MenuBrowseFilters {
   category?: string;
   minPrice?: number;
   maxPrice?: number;
+  location?: string;
   sort: "newest" | "price_asc" | "price_desc";
   page: number;
   limit: number;
@@ -45,6 +46,25 @@ export const getAvailableMenuItems = async (
     isAvailable: true,
     approvalStatus: "APPROVED",
   };
+
+  if (filters.location) {
+    const restaurants = await db
+      .collection("restaurants")
+      .find(
+        {
+          address: {
+            $regex: escapeRegex(filters.location),
+            $options: "i",
+          },
+        },
+        { projection: { _id: 1 } }
+      )
+      .toArray();
+
+    query.restaurantId = {
+      $in: restaurants.map((restaurant) => restaurant._id.toString()),
+    };
+  }
 
   if (filters.search) {
     query.name = {
