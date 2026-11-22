@@ -4,6 +4,7 @@ import type Stripe from "stripe";
 
 import connectDB from "../config/database.js";
 import stripe from "../config/stripe.js";
+import { upsertTransactionFromInvoice } from "./transaction.service.js";
 
 type SubscriptionWithPeriod = Stripe.Subscription & {
   current_period_end: number;
@@ -181,6 +182,19 @@ export const handleStripeWebhookEvent = async (
       break;
     }
 
+    // Successful subscription invoice payment
+    case "invoice.paid": {
+      const invoice = event.data.object as Stripe.Invoice;
+
+      await upsertTransactionFromInvoice(
+        invoice,
+        "PAID",
+        event.id
+      );
+
+      break;
+    }
+
     // Subscription updated
     case "customer.subscription.updated": {
       const subscription =
@@ -214,18 +228,24 @@ export const handleStripeWebhookEvent = async (
       const invoice = event.data.object as Stripe.Invoice;
       const customerId = getCustomerId(invoice.customer);
 
-      if (!customerId) break;
+      if (customerId) {
+        const db = await connectDB();
 
-      const db = await connectDB();
-
-      await db.collection("user").updateOne(
-        { stripeCustomerId: customerId },
-        {
-          $set: {
-            isPremium: false,
-            subscriptionStatus: "PAST_DUE",
+        await db.collection("user").updateOne(
+          { stripeCustomerId: customerId },
+          {
+            $set: {
+              isPremium: false,
+              subscriptionStatus: "PAST_DUE",
+            },
           },
-        },
+        );
+      }
+
+      await upsertTransactionFromInvoice(
+        invoice,
+        "FAILED",
+        event.id
       );
 
       break;

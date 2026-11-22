@@ -16,6 +16,10 @@ import {
   getAdminUsersController,
   getAdminUserByIdController,
 } from "../controllers/admin-users.controller.js";
+import {
+  getAdminTransactionsController,
+  getAdminTransactionByIdController,
+} from "../controllers/admin-transaction.controller.js";
 
 
 import { authorize } from "../middlewares/role.middleware.js";
@@ -42,5 +46,9 @@ router.get("/menu-items", getAdminMenuItemsController);
 router.get("/menu-items/:id", getAdminMenuItemController);
 router.patch("/menu-items/:id/approve", approveMenuItemController);
 router.patch("/menu-items/:id/reject", rejectMenuItemController);
+
+// TRANSACTIONS
+router.get("/transactions", getAdminTransactionsController);
+router.get("/transactions/:id", getAdminTransactionByIdController);
 
 export default router;
