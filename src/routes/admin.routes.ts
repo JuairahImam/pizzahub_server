@@ -12,6 +12,10 @@ import {
   rejectMenuItemController,
 } from "../controllers/admin.controller.js";
 import { getAdminDashboardOverviewController } from "../controllers/admin-dashboard.controller.js";
+import {
+  getAdminUsersController,
+  getAdminUserByIdController,
+} from "../controllers/admin-users.controller.js";
 
 
 import { authorize } from "../middlewares/role.middleware.js";
@@ -28,6 +32,10 @@ router.get("/vendors", getAllVendorsController);
 
 router.patch("/users/block", blockUserController);
 router.patch("/users/unblock", unblockUserController);
+
+// USER MANAGEMENT
+router.get("/users", getAdminUsersController);
+router.get("/users/:id", getAdminUserByIdController);
 
 // MENU MODERATION
 router.get("/menu-items", getAdminMenuItemsController);

@@ -402,6 +402,114 @@ export const rejectMenuItem = async (
   };
 };
 
+export interface AdminUsersFilters {
+  q?: string;
+  role?: string;
+  blocked?: boolean;
+  page: number;
+  limit: number;
+}
+
+export const getAdminUsers = async (filters: AdminUsersFilters) => {
+  const db = await connectDB();
+  const users = db.collection("user");
+
+  const query: Record<string, unknown> = {};
+
+  if (filters.role) {
+    query.role = filters.role;
+  }
+
+  if (filters.blocked !== undefined) {
+    query.isBlocked = filters.blocked;
+  }
+
+  if (filters.q) {
+    query.$or = [
+      {
+        name: {
+          $regex: escapeRegex(filters.q),
+          $options: "i",
+        },
+      },
+      {
+        email: {
+          $regex: escapeRegex(filters.q),
+          $options: "i",
+        },
+      },
+    ];
+  }
+
+  const total = await users.countDocuments(query);
+
+  const items = await users
+    .find(query, {
+      projection: {
+        name: 1,
+        email: 1,
+        role: 1,
+        isBlocked: 1,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    })
+    .sort({ createdAt: -1 })
+    .skip((filters.page - 1) * filters.limit)
+    .limit(filters.limit)
+    .toArray();
+
+  return {
+    users: items.map((user: any) => ({
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isBlocked: user.isBlocked === true,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    })),
+    pagination: {
+      total,
+      page: filters.page,
+      limit: filters.limit,
+      totalPages: Math.ceil(total / filters.limit),
+    },
+  };
+};
+
+export const getAdminUserById = async (id: string) => {
+  const db = await connectDB();
+
+  const user = await db.collection("user").findOne(
+    { _id: new ObjectId(id) },
+    {
+      projection: {
+        name: 1,
+        email: 1,
+        role: 1,
+        isBlocked: 1,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    }
+  );
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user._id.toString(),
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    isBlocked: user.isBlocked === true,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+};
+
 export const getAdminDashboardOverview = async () => {
   const db = await connectDB();
   const users = db.collection("user");
