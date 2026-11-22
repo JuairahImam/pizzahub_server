@@ -39,7 +39,25 @@ export const createMenuItemController = async (
       imageUrl,
       imageId,
       isAvailable,
-    } = req.body;
+    } = req.body ?? {};
+
+    const protectedApprovalFields = [
+      "approvalStatus",
+      "rejectionReason",
+      "reviewedAt",
+      "reviewedBy",
+    ];
+
+    if (
+      protectedApprovalFields.some(
+        (field) => req.body?.[field] !== undefined
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Approval fields cannot be modified by vendors.",
+      });
+    }
 
     if (
       !isValidString(name) ||
@@ -100,6 +118,14 @@ export const createMenuItemController = async (
     );
 
     if (!result.success) {
+      if (result.reason === "ACTIVE_LIMIT_REACHED") {
+        return res.status(403).json({
+          success: false,
+          message:
+            "Free plan allows a maximum of 3 active menu items. Upgrade to Premium to add more.",
+        });
+      }
+
       return res.status(404).json({
         success: false,
         message: "Restaurant profile not found. Create it first.",
@@ -156,6 +182,24 @@ export const updateMenuItemController = async (
       return res.status(400).json({
         success: false,
         message: "Invalid menu item ID.",
+      });
+    }
+
+    const protectedApprovalFields = [
+      "approvalStatus",
+      "rejectionReason",
+      "reviewedAt",
+      "reviewedBy",
+    ];
+
+    if (
+      protectedApprovalFields.some(
+        (field) => req.body?.[field] !== undefined
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Approval fields cannot be modified by vendors.",
       });
     }
 
@@ -244,6 +288,14 @@ export const updateMenuItemController = async (
     );
 
     if (!result.success) {
+      if (result.reason === "ACTIVE_LIMIT_REACHED") {
+        return res.status(403).json({
+          success: false,
+          message:
+            "Free plan allows a maximum of 3 active menu items. Upgrade to Premium to add more.",
+        });
+      }
+
       return res.status(404).json({
         success: false,
         message: "Menu item not found.",

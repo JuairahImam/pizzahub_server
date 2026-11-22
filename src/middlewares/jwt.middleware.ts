@@ -66,6 +66,9 @@ export const authenticateJWT = async (
           email: 1,
           role: 1,
           isBlocked: 1,
+          isPremium: 1,
+          subscriptionStatus: 1,
+          premiumExpiresAt: 1,
         },
       }
     );
@@ -103,6 +106,12 @@ export const authenticateJWT = async (
       email: user.email,
       role: user.role,
       isBlocked: user.isBlocked === true,
+      isPremium: user.isPremium === true,
+      subscriptionStatus:
+        typeof user.subscriptionStatus === "string"
+          ? user.subscriptionStatus
+          : "FREE",
+      premiumExpiresAt: user.premiumExpiresAt ?? null,
     };
 
     next();
