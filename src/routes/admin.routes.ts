@@ -6,6 +6,10 @@ import {
   getAllVendorsController,
   blockUserController,
   unblockUserController,
+  getAdminMenuItemsController,
+  getAdminMenuItemController,
+  approveMenuItemController,
+  rejectMenuItemController,
 } from "../controllers/admin.controller.js";
 
 
@@ -21,5 +25,11 @@ router.get("/vendors", getAllVendorsController);
 
 router.patch("/users/block", blockUserController);
 router.patch("/users/unblock", unblockUserController);
+
+// MENU MODERATION
+router.get("/menu-items", getAdminMenuItemsController);
+router.get("/menu-items/:id", getAdminMenuItemController);
+router.patch("/menu-items/:id/approve", approveMenuItemController);
+router.patch("/menu-items/:id/reject", rejectMenuItemController);
 
 export default router;
