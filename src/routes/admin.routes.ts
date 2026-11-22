@@ -10,6 +10,7 @@ import {
   getAdminMenuItemController,
   approveMenuItemController,
   rejectMenuItemController,
+  deleteAdminMenuItemController,
 } from "../controllers/admin.controller.js";
 import { getAdminDashboardOverviewController } from "../controllers/admin-dashboard.controller.js";
 import {
@@ -46,6 +47,7 @@ router.get("/menu-items", getAdminMenuItemsController);
 router.get("/menu-items/:id", getAdminMenuItemController);
 router.patch("/menu-items/:id/approve", approveMenuItemController);
 router.patch("/menu-items/:id/reject", rejectMenuItemController);
+router.delete("/menu-items/:id", deleteAdminMenuItemController);
 
 // TRANSACTIONS
 router.get("/transactions", getAdminTransactionsController);

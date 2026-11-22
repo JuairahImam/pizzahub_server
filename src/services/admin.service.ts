@@ -309,6 +309,17 @@ export const getAdminMenuItems = async (filters: AdminMenuFilters) => {
   };
 };
 
+export const deleteAdminMenuItem = async (id: string) => {
+  const db = await connectDB();
+  const menuItems = db.collection("menuItems");
+
+  const result = await menuItems.deleteOne({
+    _id: new ObjectId(id),
+  });
+
+  return { success: result.deletedCount > 0 };
+};
+
 export const getAdminMenuItemById = async (id: string) => {
   const db = await connectDB();
   const item = await db.collection("menuItems").findOne({
