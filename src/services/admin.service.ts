@@ -401,3 +401,135 @@ export const rejectMenuItem = async (
     menuItem: enriched[0],
   };
 };
+
+export const getAdminDashboardOverview = async () => {
+  const db = await connectDB();
+  const users = db.collection("user");
+  const menuItems = db.collection("menuItems");
+  const orders = db.collection("orders");
+
+  const [
+    totalUsers,
+    totalCustomers,
+    totalVendors,
+    blockedUsers,
+    totalMenuItems,
+    pendingMenuItems,
+    approvedMenuItems,
+    rejectedMenuItems,
+    totalOrders,
+    pendingOrders,
+    confirmedOrders,
+    preparingOrders,
+    outForDeliveryOrders,
+    deliveredOrders,
+    rejectedOrders,
+    cancelledOrders,
+    deliveredOrderValueResult,
+    recentOrders,
+    recentMenuItemsRaw,
+  ] = await Promise.all([
+    users.countDocuments(),
+    users.countDocuments({ role: "customer" }),
+    users.countDocuments({ role: "vendor" }),
+    users.countDocuments({ isBlocked: true }),
+    menuItems.countDocuments(),
+    menuItems.countDocuments({ approvalStatus: "PENDING" }),
+    menuItems.countDocuments({ approvalStatus: "APPROVED" }),
+    menuItems.countDocuments({ approvalStatus: "REJECTED" }),
+    orders.countDocuments(),
+    orders.countDocuments({ status: "PENDING" }),
+    orders.countDocuments({ status: "CONFIRMED" }),
+    orders.countDocuments({ status: "PREPARING" }),
+    orders.countDocuments({ status: "OUT_FOR_DELIVERY" }),
+    orders.countDocuments({ status: "DELIVERED" }),
+    orders.countDocuments({ status: "REJECTED" }),
+    orders.countDocuments({ status: "CANCELLED" }),
+    orders
+      .aggregate([
+        { $match: { status: "DELIVERED" } },
+        { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+      ])
+      .toArray(),
+    orders
+      .find(
+        {},
+        {
+          projection: {
+            _id: 1,
+            customerName: 1,
+            restaurantName: 1,
+            totalAmount: 1,
+            status: 1,
+            createdAt: 1,
+          },
+        }
+      )
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .toArray(),
+    menuItems
+      .find(
+        {},
+        {
+          projection: {
+            _id: 1,
+            name: 1,
+            category: 1,
+            approvalStatus: 1,
+            isAvailable: 1,
+            vendorId: 1,
+            createdAt: 1,
+          },
+        }
+      )
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .toArray(),
+  ]);
+
+  const recentMenuItems = await enrichMenuItems(recentMenuItemsRaw as any[]);
+
+  return {
+    users: {
+      total: totalUsers,
+      customers: totalCustomers,
+      vendors: totalVendors,
+      blocked: blockedUsers,
+    },
+    menuItems: {
+      total: totalMenuItems,
+      pending: pendingMenuItems,
+      approved: approvedMenuItems,
+      rejected: rejectedMenuItems,
+    },
+    orders: {
+      total: totalOrders,
+      pending: pendingOrders,
+      confirmed: confirmedOrders,
+      preparing: preparingOrders,
+      outForDelivery: outForDeliveryOrders,
+      delivered: deliveredOrders,
+      rejected: rejectedOrders,
+      cancelled: cancelledOrders,
+      deliveredOrderValue: deliveredOrderValueResult[0]?.total ?? 0,
+    },
+    recentOrders: recentOrders.map((order: any) => ({
+      id: order._id.toString(),
+      customerName: order.customerName,
+      restaurantName: order.restaurantName,
+      totalAmount: order.totalAmount,
+      status: order.status,
+      createdAt: order.createdAt,
+    })),
+    recentMenuItems: recentMenuItems.map((item: any) => ({
+      id: item._id.toString(),
+      name: item.name,
+      category: item.category,
+      approvalStatus: item.approvalStatus,
+      isAvailable: item.isAvailable,
+      vendorName: item.vendor?.name ?? null,
+      createdAt: item.createdAt,
+    })),
+  };
+};

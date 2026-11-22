@@ -11,6 +11,7 @@ import {
   approveMenuItemController,
   rejectMenuItemController,
 } from "../controllers/admin.controller.js";
+import { getAdminDashboardOverviewController } from "../controllers/admin-dashboard.controller.js";
 
 
 import { authorize } from "../middlewares/role.middleware.js";
@@ -19,6 +20,8 @@ import { authenticateJWT } from "../middlewares/jwt.middleware.js";
 const router = Router();
 
 router.use(authenticateJWT, authorize("admin"));
+
+router.get("/dashboard/overview", getAdminDashboardOverviewController);
 
 router.patch("/users/promote-vendor", promoteVendorController);
 router.get("/vendors", getAllVendorsController);
