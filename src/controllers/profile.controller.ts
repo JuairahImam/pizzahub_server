@@ -1,9 +1,11 @@
 import type { Request, Response } from "express";
+import type { Express } from "express";
 import { ObjectId } from "mongodb";
 
 import {
   getMyProfile,
   updateMyProfile,
+  uploadProfileImage,
 } from "../services/profile.service.js";
 
 const allowedUpdateFields = ["name"];
@@ -129,6 +131,51 @@ export const updateMyProfileController = async (
     return res.status(500).json({
       success: false,
       message: "Failed to update profile.",
+    });
+  }
+};
+
+
+export const uploadMyProfileImageController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Please select an image to upload.",
+      });
+    }
+
+    const result = await uploadProfileImage(res.locals.user.id, req.file);
+
+    if (!result?.user) {
+      return res.status(404).json({
+        success: false,
+        message: "User profile not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile image uploaded successfully.",
+      image: result.image,
+      user: {
+        id: result.user._id.toString(),
+        name: result.user.name,
+        email: result.user.email,
+        role: result.user.role,
+        image: result.user.image ?? result.image.imageUrl,
+        createdAt: result.user.createdAt,
+        updatedAt: result.user.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Upload profile image error:", error);
+    return res.status(502).json({
+      success: false,
+      message: "Failed to upload profile image. Please try again.",
     });
   }
 };

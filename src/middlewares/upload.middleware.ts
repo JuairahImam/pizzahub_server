@@ -25,6 +25,33 @@ const upload = multer({
   },
 });
 
+export const uploadProfileImage = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  upload.single("image")(req, res, (error) => {
+    if (error instanceof multer.MulterError) {
+      return res.status(400).json({
+        success: false,
+        message:
+          error.code === "LIMIT_FILE_SIZE"
+            ? "Image size must not exceed 5 MB."
+            : error.message,
+      });
+    }
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    next();
+  });
+};
+
 export const uploadMenuImage = (
   req: Request,
   res: Response,

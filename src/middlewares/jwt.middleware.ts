@@ -105,6 +105,7 @@ export const authenticateJWT = async (
       name: user.name,
       email: user.email,
       role: user.role,
+      image: user.image ?? null,
       isBlocked: user.isBlocked === true,
       isPremium: user.isPremium === true,
       subscriptionStatus:
