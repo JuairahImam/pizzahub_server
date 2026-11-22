@@ -4,6 +4,10 @@ import { Router } from "express";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { authenticateJWT } from "../middlewares/jwt.middleware.js";
 import { authorize } from "../middlewares/role.middleware.js";
+import {
+  getMyProfileController,
+  updateMyProfileController,
+} from "../controllers/profile.controller.js";
 
 const router = Router();
 
@@ -50,5 +54,9 @@ router.get(
     });
   }
 );
+
+// Profile management
+router.get("/profile", authenticateJWT, getMyProfileController);
+router.patch("/profile", authenticateJWT, updateMyProfileController);
 
 export default router;
