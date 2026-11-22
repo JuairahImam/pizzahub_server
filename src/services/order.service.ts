@@ -2,6 +2,73 @@
 import { ObjectId } from "mongodb";
 import connectDB from "../config/database.js";
 
+
+import { randomUUID } from "crypto";
+
+const acquireOrderCreationLock = async (
+  db: any,
+  customerId: string,
+  deliveryDate: string
+) => {
+  const locks = db.collection("orderCreationLocks");
+  const lockId = randomUUID();
+
+  await locks.createIndex(
+    { customerId: 1, deliveryDate: 1 },
+    { unique: true }
+  );
+  await locks.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+  let attempts = 0;
+
+  while (attempts < 3000) {
+    attempts += 1;
+
+    try {
+      await locks.insertOne({
+        customerId,
+        deliveryDate,
+        lockId,
+        expiresAt: new Date(Date.now() + 30000),
+      });
+
+      return lockId;
+    } catch (error: any) {
+      if (error?.code === 11000) {
+        const deleted = await locks.deleteOne({
+          customerId,
+          deliveryDate,
+          expiresAt: { $lt: new Date() },
+        });
+
+        if (deleted.deletedCount > 0) {
+          continue;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error("Unable to acquire order creation lock.");
+};
+
+const releaseOrderCreationLock = async (
+  db: any,
+  customerId: string,
+  deliveryDate: string,
+  lockId: string
+) => {
+  await db.collection("orderCreationLocks").deleteOne({
+    customerId,
+    deliveryDate,
+    lockId,
+  });
+};
+
 export interface OrderItemInput {
   menuItemId: string;
   quantity: number;
@@ -11,6 +78,8 @@ export interface CreateOrderInput {
   items: OrderItemInput[];
   deliveryAddress: string;
   contactPhone: string;
+  deliveryDate: string;
+  customerMessage?: string | null;
 }
 
 // CUSTOMER: CREATE ORDER
@@ -28,7 +97,14 @@ export const createOrder = async (
   const restaurantsCollection = db.collection("restaurants");
   const ordersCollection = db.collection("orders");
 
-  const itemIds = data.items.map((item) => item.menuItemId);
+  const lockId = await acquireOrderCreationLock(
+    db,
+    customer.id,
+    data.deliveryDate
+  );
+
+  try {
+    const itemIds = data.items.map((item) => item.menuItemId);
 
   if (
     itemIds.some((id) => !ObjectId.isValid(id)) ||
@@ -70,6 +146,27 @@ export const createOrder = async (
     return { success: false as const, reason: "RESTAURANT_NOT_FOUND" };
   }
 
+  const activeOrderStatuses = [
+    "PENDING",
+    "CONFIRMED",
+    "PREPARING",
+    "OUT_FOR_DELIVERY",
+  ];
+
+  const duplicateActiveOrder = await ordersCollection.findOne({
+    customerId: customer.id,
+    deliveryDate: data.deliveryDate,
+    status: { $in: activeOrderStatuses },
+    "items.menuItemId": { $in: itemIds },
+  });
+
+  if (duplicateActiveOrder) {
+    return {
+      success: false as const,
+      reason: "DUPLICATE_ACTIVE_ORDER",
+    };
+  }
+
   const menuItemMap = new Map(
     menuItems.map((item) => [item._id.toString(), item])
   );
@@ -105,6 +202,8 @@ export const createOrder = async (
     totalAmount,
     deliveryAddress: data.deliveryAddress,
     contactPhone: data.contactPhone,
+    deliveryDate: data.deliveryDate,
+    customerMessage: data.customerMessage?.trim() || null,
     status: "PENDING",
     rejectionReason: null,
     createdAt: now,
@@ -117,6 +216,14 @@ export const createOrder = async (
     success: true as const,
     order: { ...order, _id: result.insertedId },
   };
+  } finally {
+    await releaseOrderCreationLock(
+      db,
+      customer.id,
+      data.deliveryDate,
+      lockId
+    );
+  }
 };
 
 // CUSTOMER: GET MY ORDERS
