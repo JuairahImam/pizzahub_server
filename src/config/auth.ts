@@ -75,5 +75,14 @@ export const auth = betterAuth({
     "https://pizzahubclient.vercel.app",
     ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
   ],
+  // The deployed frontend and API are on different sites (vercel.app ->
+  // onrender.com). SameSite=Lax cookies are not sent on those cross-site
+  // fetches, so sessions appear empty and protected routes redirect to login.
+  advanced: {
+    defaultCookieAttributes: {
+      sameSite: "none",
+      secure: true,
+    },
+  },
   plugins: [jwt()],
 });
