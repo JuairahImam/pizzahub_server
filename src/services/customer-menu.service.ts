@@ -43,6 +43,7 @@ export const getAvailableMenuItems = async (
 
   const query: Record<string, unknown> = {
     isAvailable: true,
+    approvalStatus: "APPROVED",
   };
 
   if (filters.search) {
@@ -163,6 +164,7 @@ export const getAvailableMenuItemById = async (
   const item = await db.collection("menuItems").findOne({
     _id: new ObjectId(itemId),
     isAvailable: true,
+    approvalStatus: "APPROVED",
   });
 
   if (!item) {
@@ -193,6 +195,7 @@ export const getAvailableCategories = async () => {
     .collection("menuItems")
     .distinct("category", {
       isAvailable: true,
+      approvalStatus: "APPROVED",
     });
 
   return categories
