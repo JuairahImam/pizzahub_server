@@ -13,10 +13,17 @@ dotenv.config();
 
 const app = express();
 
-// CORS Configuration
+// CORS Configuration. Keep local development working and allow the deployed
+// frontend origin; CLIENT_URL may add another origin when supplied.
+const allowedClientOrigins = [
+  "http://localhost:3000",
+  "https://pizzahubclient.vercel.app",
+  ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
+];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: allowedClientOrigins,
     credentials: true,
   }),
 );
