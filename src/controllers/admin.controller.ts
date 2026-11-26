@@ -323,6 +323,14 @@ export const approveMenuItemController = async (
     const result = await approveMenuItem(user.id, id);
 
     if (!result.success) {
+      if (result.reason === "LIMIT_REACHED") {
+        return res.status(403).json({
+          success: false,
+          message:
+            "Free plan allows a maximum of 3 active menu items. Upgrade to Premium to approve more.",
+        });
+      }
+
       return res.status(404).json({
         success: false,
         message: "Menu item not found.",

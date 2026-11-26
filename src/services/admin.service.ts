@@ -349,6 +349,37 @@ export const approveMenuItem = async (
     return { success: false, reason: "NOT_FOUND" as const };
   }
 
+  // Free vendors may only have 3 approved and available items. Enforcing the
+  // cap here prevents pending items from bypassing the limit at creation.
+  if (
+    existingItem.approvalStatus !== "APPROVED" &&
+    existingItem.isAvailable === true &&
+    typeof existingItem.vendorId === "string"
+  ) {
+    const vendor = await db
+      .collection("user")
+      .findOne({ _id: new ObjectId(existingItem.vendorId) });
+
+    const premium =
+      vendor?.isPremium === true &&
+      vendor?.subscriptionStatus === "ACTIVE" &&
+      (!vendor.premiumExpiresAt ||
+        new Date(vendor.premiumExpiresAt) > new Date());
+
+    if (!premium) {
+      const activeCount = await menuItems.countDocuments({
+        vendorId: existingItem.vendorId,
+        isAvailable: true,
+        approvalStatus: "APPROVED",
+        _id: { $ne: existingItem._id },
+      });
+
+      if (activeCount >= 3) {
+        return { success: false, reason: "LIMIT_REACHED" as const };
+      }
+    }
+  }
+
   await menuItems.updateOne(
     { _id: new ObjectId(id) },
     {
