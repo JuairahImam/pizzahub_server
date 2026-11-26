@@ -103,6 +103,12 @@ export const auth = betterAuth({
         input: false,
       },
 
+      stripeCheckoutSessionId: {
+        type: "string",
+        required: false,
+        input: false,
+      },
+
       premiumExpiresAt: {
         type: "date",
         required: false,

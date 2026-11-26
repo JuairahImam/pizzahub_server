@@ -170,6 +170,7 @@ export const upsertTransactionFromInvoice = async (
     customerEmail,
     stripeCustomerId: customerId,
     stripeSubscriptionId: subscriptionId,
+    stripeSessionId: user.stripeCheckoutSessionId ?? null,
     stripeInvoiceId: invoice.id,
     stripePaymentIntentId:
       getPaymentIntentId(authoritativeInvoice) ?? getPaymentIntentId(invoice),

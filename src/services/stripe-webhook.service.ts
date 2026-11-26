@@ -223,6 +223,25 @@ export const handleStripeWebhookEvent = async (
       break;
     }
 
+    // Abandoned / expired Checkout session: nothing was paid, so Premium is
+    // never activated. Clear the stored session id for the next attempt.
+    case "checkout.session.expired": {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const db = await connectDB();
+
+      await db.collection("user").updateOne(
+        { stripeCheckoutSessionId: session.id },
+        {
+          $set: {
+            stripeCheckoutSessionId: null,
+            updatedAt: new Date(),
+          },
+        }
+      );
+
+      break;
+    }
+
     // Failed recurring payment
     case "invoice.payment_failed": {
       const invoice = event.data.object as Stripe.Invoice;

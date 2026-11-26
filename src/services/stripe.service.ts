@@ -104,6 +104,16 @@ export const createPremiumCheckoutSession = async ({
     },
   });
 
+  await users.updateOne(
+    { _id: new ObjectId(userId) },
+    {
+      $set: {
+        stripeCheckoutSessionId: session.id,
+        updatedAt: new Date(),
+      },
+    }
+  );
+
   return {
     sessionId: session.id,
     checkoutUrl: session.url,
