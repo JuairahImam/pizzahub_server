@@ -142,31 +142,31 @@ const seedAll = async () => {
       {
         name: "Margherita Pizza",
         description: "Classic pizza with cheese, tomato and basil.",
-        category: "Pizza",
+        category: "Classic Pizzas",
         price: 450,
       },
       {
         name: "Chicken BBQ Pizza",
         description: "BBQ chicken with mozzarella cheese.",
-        category: "Pizza",
+        category: "Specialty / Gourmet Pizzas",
         price: 650,
       },
       {
         name: "Pepperoni Pizza",
         description: "Pepperoni with mozzarella and tomato sauce.",
-        category: "Pizza",
+        category: "Meat Lovers",
         price: 700,
       },
       {
         name: "Garlic Bread",
         description: "Toasted bread with garlic butter.",
-        category: "Sides",
+        category: "Sides & Appetizers",
         price: 180,
       },
       {
         name: "Coke",
         description: "Chilled soft drink.",
-        category: "Drinks",
+        category: "Beverages & Desserts",
         price: 60,
       },
     ];
