@@ -4,6 +4,8 @@ PizzaHub backend is an Express 5, TypeScript, MongoDB official driver server usi
 
 Repository: `https://github.com/JuairahImam/pizzahub_server.git`
 
+Client repository: `https://github.com/JuairahImam/pizzahub_client.git`
+
 Live API (verified): `https://pizzahub-server-toql.onrender.com`
 
 ## Overview
@@ -199,13 +201,26 @@ Orders require authenticated customer role and real menu items available and app
 
 Free vendors can have at most 3 active menu items. Premium vendors have unlimited active items according to subscription state.
 
+## Vendor signup requests
+
+| Method | Endpoint | Access |
+| --- | --- | --- |
+| `POST /api/vendor-requests` | Submit an application | JWT + customer |
+| `GET /api/vendor-requests/me` | Get own latest request | JWT |
+
+Applications are stored in the `vendorRequests` collection with status `PENDING`, `APPROVED`, or `REJECTED`. A customer with a pending application cannot submit another one; rejected applicants can re-apply. Restaurant name (2–120 characters) and an optional message (up to 500 characters) are accepted. The user identity comes from the JWT, never from the request body.
+
 ## Admin APIs
 
 | Method | Endpoint | Access |
 | --- | --- | --- |
 | `GET /api/admin/dashboard/overview` | Admin dashboard overview | JWT + admin |
 | `GET /api/admin/vendors` | List vendors | JWT + admin |
-| `PATCH /api/admin/users/promote-vendor` | Promote customer to vendor | JWT + admin |
+| `GET /api/admin/vendor-requests` | List vendor applications with status/search/pagination | JWT + admin |
+| `GET /api/admin/vendor-requests/:id` | Vendor application details | JWT + admin |
+| `PATCH /api/admin/vendor-requests/:id/approve` | Approve application and grant vendor role | JWT + admin |
+| `PATCH /api/admin/vendor-requests/:id/reject` | Reject application with reason (3–300 chars) | JWT + admin |
+| `PATCH /api/admin/users/promote-vendor` | Promote customer to vendor directly | JWT + admin |
 | `GET /api/admin/users` | List users with search/role/status/pagination | JWT + admin |
 | `GET /api/admin/users/:id` | User details | JWT + admin |
 | `PATCH /api/admin/users/block` | Block user | JWT + admin |
@@ -312,3 +327,8 @@ Deployment checklist:
 - Configure Stripe production webhook endpoint: `https://pizzahub-server-toql.onrender.com/api/stripe/webhook`
 - Verify `/health` and public menu endpoint.
 - Do not make real charges in staging.
+
+## Challenge implementation notes
+
+- **Advanced search and sorting:** `GET /api/menu-items` accepts `q`, `category`, `location`, `minPrice`, `maxPrice`, `sort` (`newest`, `price_asc`, `price_desc`), `page`, and `limit`. `customer-menu.controller.ts` validates every parameter, then `customer-menu.service.ts` builds the MongoDB filter and sort. Only `isAvailable: true` and `approvalStatus: "APPROVED"` items are returned.
+- **JWT middleware flow:** protected routers run `authenticateJWT`, which verifies the Bearer token against the Better Auth JWKS endpoint (with issuer/audience checks), reloads the user's role and blocked flag from MongoDB, and populates `res.locals.user`. `authorize(...roles)` then enforces role-based access with 401/403 responses. Client-supplied user IDs and roles are never trusted.

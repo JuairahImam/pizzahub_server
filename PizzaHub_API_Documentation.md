@@ -405,7 +405,49 @@ environment before treating subscription activation as production-ready.
 
 ------------------------------------------------------------------------
 
-## 10. Admin APIs
+## 10. Vendor Signup Requests
+
+A customer applies to become a vendor. The role is changed only when an admin
+approves the request, so client-supplied roles are never trusted.
+
+  -------------------------------------------------------------------------------------
+  Method                  Endpoint                          Description
+  ----------------------- --------------------------------- ----------------------------
+  `POST`                  `/api/vendor-requests`            Submit an application
+                                                             (JWT + customer)
+
+  `GET`                   `/api/vendor-requests/me`         Get own latest request
+                                                             (JWT)
+
+  `GET`                   `/api/admin/vendor-requests`      List applications
+                                                             (JWT + admin)
+
+  `GET`                   `/api/admin/vendor-requests/:id`  Application details
+                                                             (JWT + admin)
+
+  `PATCH`                 `/api/admin/vendor-requests/:id/approve`
+                                                             Approve and grant vendor
+                                                             role (JWT + admin)
+
+  `PATCH`                 `/api/admin/vendor-requests/:id/reject`
+                                                             Reject with reason
+                                                             (JWT + admin)
+  -------------------------------------------------------------------------------------
+
+`POST /api/vendor-requests` accepts `{ "restaurantName": string, "message"?: string }`.
+Restaurant name must be 2–120 characters; message must be at most 500 characters.
+The applicant identity is read from the JWT. A pending application blocks
+duplicates (409); rejected applicants may apply again. Applications are stored in
+the `vendorRequests` collection with status `PENDING`, `APPROVED`, or `REJECTED`
+and optional `reviewedAt`, `reviewedBy`, and `rejectionReason`.
+
+`GET /api/admin/vendor-requests` supports `status`, `q`, `page`, and `limit`.
+Reject requires `rejectionReason` (3–300 characters). Approve is the trusted
+server path that sets `role: "vendor"` on the applicant's user record.
+
+------------------------------------------------------------------------
+
+## 11. Admin APIs
 
 All endpoints require a valid JWT for a user with the `admin` role.
 
@@ -425,7 +467,7 @@ All endpoints require a valid JWT for a user with the `admin` role.
 
 ------------------------------------------------------------------------
 
-## 11. Common HTTP Status Codes
+## 12. Common HTTP Status Codes
 
   -----------------------------------------------------------------------
   Status                              Meaning
@@ -457,7 +499,7 @@ resource.
 
 ------------------------------------------------------------------------
 
-## 12. Integration Notes
+## 13. Integration Notes
 
 1.  Use the production base URL for production integration and the local
     base URL during development.
@@ -474,7 +516,7 @@ resource.
 7.  Do not assume an endpoint or business rule is available unless it is
     listed in this document and verified in the target environment.
 
-## 13. API Coverage Notes
+## 14. API Coverage Notes
 
 The endpoint list above documents the application routes currently
 identified in the backend route configuration. Some assignment-level
