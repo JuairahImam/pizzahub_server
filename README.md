@@ -233,7 +233,7 @@ Applications are stored in the `vendorRequests` collection with status `PENDING`
 | `GET /api/admin/transactions` | List payment transactions | JWT + admin |
 | `GET /api/admin/transactions/:id` | Transaction details | JWT + admin |
 
-Admin menu moderation supports status, vendor, category, search, pagination. Approve/reject record review status; editing content resets approval; availability-only changes preserve approval.
+Admin menu moderation supports status, vendor, category, search, pagination. Approve/reject record review status; editing content resets approval; availability-only changes preserve approval. Approval also enforces the free plan's 3-item active limit (premium vendors are exempt), so pending items cannot bypass the quota.
 
 Admin transactions support search by customer email, vendor ID, transaction/Stripe identifiers, status, type, and date range.
 
@@ -309,6 +309,7 @@ Relationships:
 - Vendor endpoints require vendor role and JWT; vendors can only access their own data.
 - Stripe webhook signatures are verified before processing.
 - Stripe amounts/currency are taken from authoritative Stripe invoice data, not client input.
+- Each Checkout session id is stored on the vendor and copied to the resulting transaction; `checkout.session.expired` clears it without activating Premium.
 
 ## Deployment
 
