@@ -21,6 +21,12 @@ import {
   getAdminTransactionsController,
   getAdminTransactionByIdController,
 } from "../controllers/admin-transaction.controller.js";
+import {
+  getVendorRequestsController,
+  getVendorRequestByIdController,
+  approveVendorRequestController,
+  rejectVendorRequestController,
+} from "../controllers/vendor-request.controller.js";
 
 
 import { authorize } from "../middlewares/role.middleware.js";
@@ -52,5 +58,11 @@ router.delete("/menu-items/:id", deleteAdminMenuItemController);
 // TRANSACTIONS
 router.get("/transactions", getAdminTransactionsController);
 router.get("/transactions/:id", getAdminTransactionByIdController);
+
+// VENDOR SIGNUP REQUESTS
+router.get("/vendor-requests", getVendorRequestsController);
+router.get("/vendor-requests/:id", getVendorRequestByIdController);
+router.patch("/vendor-requests/:id/approve", approveVendorRequestController);
+router.patch("/vendor-requests/:id/reject", rejectVendorRequestController);
 
 export default router;
