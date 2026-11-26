@@ -34,6 +34,7 @@ export const getAvailableMenuItemsController = async (
   try {
     const search = getQueryString(req.query.q);
     const category = getQueryString(req.query.category);
+    const location = getQueryString(req.query.location);
 
     const minPriceValue = getQueryString(req.query.minPrice);
     const maxPriceValue = getQueryString(req.query.maxPrice);
@@ -64,11 +65,12 @@ export const getAvailableMenuItemsController = async (
 
     if (
       (search && search.length > 100) ||
-      (category && category.length > 60)
+      (category && category.length > 60) ||
+      (location && location.length > 100)
     ) {
       return res.status(400).json({
         success: false,
-        message: "Search or category value is too long.",
+        message: "Search, category, or location value is too long.",
       });
     }
 
@@ -105,6 +107,7 @@ export const getAvailableMenuItemsController = async (
     const filters: MenuBrowseFilters = {
       search,
       category,
+      location,
       minPrice,
       maxPrice,
       sort: sortValue as MenuBrowseFilters["sort"],

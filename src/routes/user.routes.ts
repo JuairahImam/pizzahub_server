@@ -7,7 +7,9 @@ import { authorize } from "../middlewares/role.middleware.js";
 import {
   getMyProfileController,
   updateMyProfileController,
+  uploadMyProfileImageController,
 } from "../controllers/profile.controller.js";
+import { uploadProfileImage } from "../middlewares/upload.middleware.js";
 
 const router = Router();
 
@@ -58,5 +60,11 @@ router.get(
 // Profile management
 router.get("/profile", authenticateJWT, getMyProfileController);
 router.patch("/profile", authenticateJWT, updateMyProfileController);
+router.post(
+  "/profile/image",
+  authenticateJWT,
+  uploadProfileImage,
+  uploadMyProfileImageController
+);
 
 export default router;

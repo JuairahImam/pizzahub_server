@@ -38,6 +38,7 @@ export const createMenuItemController = async (
       price,
       imageUrl,
       imageId,
+      images,
       isAvailable,
     } = req.body ?? {};
 
@@ -102,6 +103,44 @@ export const createMenuItemController = async (
       });
     }
 
+    let parsedImages: string[] = [parsedImageUrl.toString()];
+
+    if (images !== undefined) {
+      if (
+        !Array.isArray(images) ||
+        images.length < 1 ||
+        images.length > 5 ||
+        images.some((url) => typeof url !== "string")
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Provide between 1 and 5 image URLs.",
+        });
+      }
+
+      try {
+        parsedImages = (images as string[]).map((url) =>
+          new URL(url).toString()
+        );
+      } catch {
+        return res.status(400).json({
+          success: false,
+          message: "One or more image URLs are invalid.",
+        });
+      }
+
+      if (parsedImages.some((url) => !url.startsWith("https://"))) {
+        return res.status(400).json({
+          success: false,
+          message: "All image URLs must use HTTPS.",
+        });
+      }
+    }
+
+    if (!parsedImages.includes(parsedImageUrl.toString())) {
+      parsedImages = [parsedImageUrl.toString(), ...parsedImages];
+    }
+
     const data: MenuItemInput = {
       name: name.trim(),
       description: description.trim(),
@@ -109,6 +148,7 @@ export const createMenuItemController = async (
       price,
       imageUrl: parsedImageUrl.toString(),
       imageId: imageId.trim(),
+      images: parsedImages,
       isAvailable,
     };
 
@@ -210,6 +250,7 @@ export const updateMenuItemController = async (
       "price",
       "imageUrl",
       "imageId",
+      "images",
       "isAvailable",
     ];
 
@@ -260,6 +301,33 @@ export const updateMenuItemController = async (
           return res.status(400).json({
             success: false,
             message: "imageUrl must be a valid HTTPS URL.",
+          });
+        }
+      } else if (field === "images") {
+        if (
+          !Array.isArray(value) ||
+          value.length < 1 ||
+          value.length > 5 ||
+          value.some((url) => typeof url !== "string")
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: "Provide between 1 and 5 image URLs.",
+          });
+        }
+
+        try {
+          const urls = (value as string[]).map((url) => new URL(url));
+
+          if (urls.some((url) => url.protocol !== "https:")) {
+            throw new Error("HTTPS required");
+          }
+
+          updates.images = urls.map((url) => url.toString());
+        } catch {
+          return res.status(400).json({
+            success: false,
+            message: "All image URLs must be valid HTTPS URLs.",
           });
         }
       } else if (field === "isAvailable") {

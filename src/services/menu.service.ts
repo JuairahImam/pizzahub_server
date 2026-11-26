@@ -9,6 +9,7 @@ export interface MenuItemInput {
   price: number;
   imageUrl: string;
   imageId: string;
+  images?: string[];
   isAvailable?: boolean;
 }
 
@@ -155,6 +156,10 @@ export const createMenuItem = async (
         price: data.price,
         imageUrl: data.imageUrl,
         imageId: data.imageId,
+        images:
+          data.images && data.images.length > 0
+            ? data.images
+            : [data.imageUrl],
         isAvailable,
         approvalStatus: "PENDING",
         rejectionReason: null,
@@ -245,6 +250,7 @@ export const updateMenuItem = async (
         "price",
         "imageUrl",
         "imageId",
+        "images",
       ];
 
       const resetsApproval = contentFields.some((field) =>

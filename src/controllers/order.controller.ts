@@ -129,9 +129,11 @@ export const createOrderController = async (
     if (!result.success) {
       const messages: Record<string, string> = {
         INVALID_ITEMS: "One or more menu item IDs are invalid.",
-        ITEMS_UNAVAILABLE: "One or more menu items are unavailable.",
+        ITEMS_UNAVAILABLE:
+          "One or more menu items are unavailable or not yet approved.",
         MULTIPLE_RESTAURANTS: "You can order from only one restaurant at a time.",
         RESTAURANT_NOT_FOUND: "Restaurant not found.",
+        OWN_ITEM: "You cannot order items from your own restaurant.",
         DUPLICATE_ACTIVE_ORDER:
           "You already have an active order for this item and delivery date.",
       };

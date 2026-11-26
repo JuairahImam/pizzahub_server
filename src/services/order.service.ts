@@ -117,6 +117,7 @@ export const createOrder = async (
     .find({
       _id: { $in: itemIds.map((id) => new ObjectId(id)) },
       isAvailable: true,
+      approvalStatus: "APPROVED",
     })
     .toArray();
 
@@ -144,6 +145,11 @@ export const createOrder = async (
 
   if (!restaurant) {
     return { success: false as const, reason: "RESTAURANT_NOT_FOUND" };
+  }
+
+  // A user must never place an order from their own restaurant.
+  if (restaurant.vendorId === customer.id) {
+    return { success: false as const, reason: "OWN_ITEM" };
   }
 
   const activeOrderStatuses = [
