@@ -12,6 +12,7 @@
     "seed:all": "tsx src/scripts/seed-all.ts",
     "seed:demo-menu": "tsx src/scripts/seed-demo-menu.ts",
     "seed:premium-demo": "tsx src/scripts/seed-premium-demo.ts",
+    "migrate:spec-fields": "tsx src/scripts/migrate-spec-fields.ts",
     "migrate:menu-approval": "tsx src/scripts/migrate-menu-approval.ts"
   },
   "keywords": [],

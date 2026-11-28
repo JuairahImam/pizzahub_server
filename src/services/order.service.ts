@@ -154,7 +154,7 @@ export const createOrder = async (
 
   const activeOrderStatuses = [
     "PENDING",
-    "CONFIRMED",
+    "ACCEPTED",
     "PREPARING",
     "OUT_FOR_DELIVERY",
   ];
@@ -204,6 +204,7 @@ export const createOrder = async (
     vendorId: restaurant.vendorId,
     restaurantId,
     restaurantName: restaurant.name,
+    itemId: orderItems[0]?.menuItemId ?? null,
     items: orderItems,
     totalAmount,
     deliveryAddress: data.deliveryAddress,
@@ -333,7 +334,7 @@ export const acceptVendorOrder = async (
     },
     {
       $set: {
-        status: "CONFIRMED",
+        status: "ACCEPTED",
         updatedAt: new Date(),
       },
     }
@@ -424,7 +425,7 @@ export const updateVendorOrderStatus = async (
   }
 
   const allowedTransitions: Record<string, string> = {
-    CONFIRMED: "PREPARING",
+    ACCEPTED: "PREPARING",
     PREPARING: "OUT_FOR_DELIVERY",
     OUT_FOR_DELIVERY: "DELIVERED",
   };

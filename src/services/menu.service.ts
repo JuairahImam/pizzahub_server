@@ -152,6 +152,8 @@ export const createMenuItem = async (
         vendorId,
         restaurantId: restaurant._id.toString(),
         name: data.name,
+        itemName: data.name,
+        status: "PENDING",
         description: data.description,
         category: data.category,
         location: data.location,
@@ -310,8 +312,13 @@ export const updateMenuItem = async (
         updatedAt: new Date(),
       };
 
+      if (Object.prototype.hasOwnProperty.call(updates, "name")) {
+        setPayload.itemName = updates.name;
+      }
+
       if (resetsApproval) {
         setPayload.approvalStatus = "PENDING";
+        setPayload.status = "PENDING";
         setPayload.rejectionReason = null;
         setPayload.reviewedAt = null;
         setPayload.reviewedBy = null;

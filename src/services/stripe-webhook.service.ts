@@ -96,16 +96,20 @@ const updateVendorSubscription = async (
   const subscriptionWithPeriod =
     subscription as SubscriptionWithPeriod;
 
+  const expiresAt = subscriptionWithPeriod.current_period_end
+    ? new Date(subscriptionWithPeriod.current_period_end * 1000)
+    : null;
+
   const updateData: Record<string, unknown> = {
     isPremium: active,
     subscriptionStatus,
+    subscriptionPlan: active ? "premium" : "free",
+    subscriptionExpiresAt: expiresAt,
     stripeSubscriptionId: subscription.id,
   };
 
-  if (subscriptionWithPeriod.current_period_end) {
-    updateData.premiumExpiresAt = new Date(
-      subscriptionWithPeriod.current_period_end * 1000,
-    );
+  if (expiresAt) {
+    updateData.premiumExpiresAt = expiresAt;
   }
 
   await updateVendorPremium(
@@ -173,6 +177,7 @@ export const handleStripeWebhookEvent = async (
           {
             isPremium: true,
             subscriptionStatus: "ACTIVE",
+            subscriptionPlan: "premium",
             stripePaymentIntentId: paymentIntent.id,
             premiumActivatedAt: new Date(),
           },
@@ -256,6 +261,7 @@ export const handleStripeWebhookEvent = async (
             $set: {
               isPremium: false,
               subscriptionStatus: "PAST_DUE",
+              subscriptionPlan: "free",
             },
           },
         );

@@ -385,6 +385,7 @@ export const approveMenuItem = async (
     {
       $set: {
         approvalStatus: "APPROVED",
+        status: "APPROVED",
         rejectionReason: null,
         reviewedAt: new Date(),
         reviewedBy: adminId,
@@ -425,6 +426,7 @@ export const rejectMenuItem = async (
     {
       $set: {
         approvalStatus: "REJECTED",
+        status: "REJECTED",
         rejectionReason,
         reviewedAt: new Date(),
         reviewedBy: adminId,
@@ -594,7 +596,7 @@ export const getAdminDashboardOverview = async () => {
     menuItems.countDocuments({ approvalStatus: "REJECTED" }),
     orders.countDocuments(),
     orders.countDocuments({ status: "PENDING" }),
-    orders.countDocuments({ status: "CONFIRMED" }),
+    orders.countDocuments({ status: "ACCEPTED" }),
     orders.countDocuments({ status: "PREPARING" }),
     orders.countDocuments({ status: "OUT_FOR_DELIVERY" }),
     orders.countDocuments({ status: "DELIVERED" }),
@@ -700,7 +702,7 @@ export const getAdminDashboardOverview = async () => {
     orders: {
       total: totalOrders,
       pending: pendingOrders,
-      confirmed: confirmedOrders,
+      accepted: confirmedOrders,
       preparing: preparingOrders,
       outForDelivery: outForDeliveryOrders,
       delivered: deliveredOrders,
