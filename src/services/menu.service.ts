@@ -6,6 +6,7 @@ export interface MenuItemInput {
   name: string;
   description: string;
   category: string;
+  location: string;
   price: number;
   imageUrl: string;
   imageId: string;
@@ -153,6 +154,7 @@ export const createMenuItem = async (
         name: data.name,
         description: data.description,
         category: data.category,
+        location: data.location,
         price: data.price,
         imageUrl: data.imageUrl,
         imageId: data.imageId,
@@ -247,6 +249,7 @@ export const updateMenuItem = async (
         "name",
         "description",
         "category",
+        "location",
         "price",
         "imageUrl",
         "imageId",

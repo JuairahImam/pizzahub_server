@@ -77,7 +77,9 @@ export const getAvailableMenuItemsController = async (
     const sortValue = getQueryString(req.query.sort) ?? "newest";
 
     if (
-      !["newest", "price_asc", "price_desc"].includes(sortValue)
+      !["newest", "price_asc", "price_desc", "premium_first"].includes(
+        sortValue
+      )
     ) {
       return res.status(400).json({
         success: false,

@@ -30,6 +30,8 @@
  * To keep passwords of already-existing accounts, add DEMO_SEED_FORCE_PASSWORD=0.
  */
 
+import { runWithEndpointContext } from "@better-auth/core/context";
+
 import connectDB from "../config/database.js";
 import { auth } from "../config/auth.js";
 
@@ -186,14 +188,14 @@ type OrderSeed = {
 };
 
 const ORDERS: OrderSeed[] = [
-  { seedKey: "pizzahub-demo-order-001", customerKey: "customer1", vendorKey: "vendor1", items: [{ name: "Margherita Classic", quantity: 2 }, { name: "Garlic Bread", quantity: 1 }], deliveryAddress: `House 10, Road 5, ${DHANMONDI}`, contactPhone: "01710000011", deliveryOffset: 1, customerMessage: "Please ring the bell twice.", status: "PENDING" },
-  { seedKey: "pizzahub-demo-order-002", customerKey: "customer2", vendorKey: "vendor1", items: [{ name: "Pepperoni Feast", quantity: 1 }, { name: "Fresh Lemonade", quantity: 2 }], deliveryAddress: `House 22, Road 7, ${DHANMONDI}`, contactPhone: "01710000012", deliveryOffset: 1, status: "CONFIRMED" },
-  { seedKey: "pizzahub-demo-order-003", customerKey: "customer3", vendorKey: "vendor1", items: [{ name: "BBQ Chicken Supreme", quantity: 1 }, { name: "Garlic Bread", quantity: 2 }], deliveryAddress: `Flat 4B, Road 9, ${BANANI}`, contactPhone: "01710000013", deliveryOffset: 2, status: "PREPARING" },
-  { seedKey: "pizzahub-demo-order-004", customerKey: "customer4", vendorKey: "vendor1", items: [{ name: "Four Cheese Delight", quantity: 1 }], deliveryAddress: `House 8, Road 4, ${UTTARA}`, contactPhone: "01710000014", deliveryOffset: 2, status: "OUT_FOR_DELIVERY" },
-  { seedKey: "pizzahub-demo-order-005", customerKey: "customer5", vendorKey: "vendor1", items: [{ name: "Spicy Beef Volcano", quantity: 2 }, { name: "Fresh Lemonade", quantity: 1 }], deliveryAddress: `House 31, Road 2, ${DHANMONDI}`, contactPhone: "01710000015", deliveryOffset: 3, status: "DELIVERED" },
-  { seedKey: "pizzahub-demo-order-006", customerKey: "customer1", vendorKey: "vendor2", items: [{ name: "Hawaiian Chicken Pizza", quantity: 1 }, { name: "Chocolate Brownie", quantity: 1 }], deliveryAddress: `House 14, Road 6, ${BANANI}`, contactPhone: "01710000016", deliveryOffset: -1, status: "DELIVERED" },
-  { seedKey: "pizzahub-demo-order-007", customerKey: "customer2", vendorKey: "vendor2", items: [{ name: "Mushroom Alfredo Pizza", quantity: 1 }], deliveryAddress: `House 5, Road 3, ${UTTARA}`, contactPhone: "01710000017", deliveryOffset: -2, status: "REJECTED", rejectionReason: "Kitchen was closed for the evening. Please try again tomorrow." },
-  { seedKey: "pizzahub-demo-order-008", customerKey: "customer3", vendorKey: "vendor1", items: [{ name: "Garden Fresh Veggie Pizza", quantity: 1 }], deliveryAddress: `House 17, Road 11, ${DHANMONDI}`, contactPhone: "01710000018", deliveryOffset: -3, status: "CANCELLED", rejectionReason: "Cancelled by the customer before preparation." },
+  { seedKey: "oven-story-order-001", customerKey: "customer1", vendorKey: "vendor1", items: [{ name: "Margherita Classic", quantity: 2 }, { name: "Garlic Bread", quantity: 1 }], deliveryAddress: `House 10, Road 5, ${DHANMONDI}`, contactPhone: "01710000011", deliveryOffset: 1, customerMessage: "Please ring the bell twice.", status: "PENDING" },
+  { seedKey: "oven-story-order-002", customerKey: "customer2", vendorKey: "vendor1", items: [{ name: "Pepperoni Feast", quantity: 1 }, { name: "Fresh Lemonade", quantity: 2 }], deliveryAddress: `House 22, Road 7, ${DHANMONDI}`, contactPhone: "01710000012", deliveryOffset: 1, status: "CONFIRMED" },
+  { seedKey: "oven-story-order-003", customerKey: "customer3", vendorKey: "vendor1", items: [{ name: "BBQ Chicken Supreme", quantity: 1 }, { name: "Garlic Bread", quantity: 2 }], deliveryAddress: `Flat 4B, Road 9, ${BANANI}`, contactPhone: "01710000013", deliveryOffset: 2, status: "PREPARING" },
+  { seedKey: "oven-story-order-004", customerKey: "customer4", vendorKey: "vendor1", items: [{ name: "Four Cheese Delight", quantity: 1 }], deliveryAddress: `House 8, Road 4, ${UTTARA}`, contactPhone: "01710000014", deliveryOffset: 2, status: "OUT_FOR_DELIVERY" },
+  { seedKey: "oven-story-order-005", customerKey: "customer5", vendorKey: "vendor1", items: [{ name: "Spicy Beef Volcano", quantity: 2 }, { name: "Fresh Lemonade", quantity: 1 }], deliveryAddress: `House 31, Road 2, ${DHANMONDI}`, contactPhone: "01710000015", deliveryOffset: 3, status: "DELIVERED" },
+  { seedKey: "oven-story-order-006", customerKey: "customer1", vendorKey: "vendor2", items: [{ name: "Hawaiian Chicken Pizza", quantity: 1 }, { name: "Chocolate Brownie", quantity: 1 }], deliveryAddress: `House 14, Road 6, ${BANANI}`, contactPhone: "01710000016", deliveryOffset: -1, status: "DELIVERED" },
+  { seedKey: "oven-story-order-007", customerKey: "customer2", vendorKey: "vendor2", items: [{ name: "Mushroom Alfredo Pizza", quantity: 1 }], deliveryAddress: `House 5, Road 3, ${UTTARA}`, contactPhone: "01710000017", deliveryOffset: -2, status: "REJECTED", rejectionReason: "Kitchen was closed for the evening. Please try again tomorrow." },
+  { seedKey: "oven-story-order-008", customerKey: "customer3", vendorKey: "vendor1", items: [{ name: "Garden Fresh Veggie Pizza", quantity: 1 }], deliveryAddress: `House 17, Road 11, ${DHANMONDI}`, contactPhone: "01710000018", deliveryOffset: -3, status: "CANCELLED", rejectionReason: "Cancelled by the customer before preparation." },
 ];
 
 type RequestSeed = {
@@ -317,7 +319,12 @@ const run = async () => {
 
       if (authContext) {
         const account = await authContext.internalAdapter.findCredentialAccount(id);
-        const passwordHash = await authContext.password.hash(seed.password);
+        // The custom password-rules plugin reads the current endpoint context,
+        // so hashing must run inside one (see @better-auth/core/context).
+        const passwordHash = await runWithEndpointContext(
+          { context: authContext, path: "/sign-up/email" } as any,
+          () => authContext.password.hash(seed.password)
+        );
         if (account) {
           await authContext.internalAdapter.updateAccount(account.id, { password: passwordHash });
         } else {
@@ -395,6 +402,7 @@ const run = async () => {
         name: seed.name,
         description: seed.description,
         category: seed.category,
+        location: seed.vendorKey === "vendor1" ? DHANMONDI : BANANI,
         price: seed.price,
         imageUrl: seed.imageUrl,
         imageId: "",
@@ -411,7 +419,13 @@ const run = async () => {
       // Refresh the owner's images if an earlier run used placeholder URLs.
       await menuItems.updateOne(
         { _id: item._id },
-        { $set: { imageUrl: seed.imageUrl, updatedAt: new Date() } }
+        {
+          $set: {
+            imageUrl: seed.imageUrl,
+            location: item.location || (seed.vendorKey === "vendor1" ? DHANMONDI : BANANI),
+            updatedAt: new Date(),
+          },
+        }
       );
     }
     if (!menuIdByNameByVendor.has(seed.vendorKey)) {

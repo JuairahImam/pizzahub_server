@@ -35,6 +35,7 @@ export const createMenuItemController = async (
       name,
       description,
       category,
+      location,
       price,
       imageUrl,
       imageId,
@@ -64,6 +65,7 @@ export const createMenuItemController = async (
       !isValidString(name) ||
       !isValidString(description) ||
       !isValidString(category) ||
+      !isValidString(location) ||
       !isValidPrice(price) ||
       !isValidString(imageUrl) ||
       !isValidString(imageId)
@@ -71,7 +73,7 @@ export const createMenuItemController = async (
       return res.status(400).json({
         success: false,
         message:
-          "Name, description, category, positive price, imageUrl and imageId are required.",
+          "Name, description, category, location, positive price, imageUrl and imageId are required.",
       });
     }
 
@@ -145,6 +147,7 @@ export const createMenuItemController = async (
       name: name.trim(),
       description: description.trim(),
       category: category.trim(),
+      location: location.trim(),
       price,
       imageUrl: parsedImageUrl.toString(),
       imageId: imageId.trim(),
@@ -247,6 +250,7 @@ export const updateMenuItemController = async (
       "name",
       "description",
       "category",
+      "location",
       "price",
       "imageUrl",
       "imageId",
@@ -263,7 +267,7 @@ export const updateMenuItemController = async (
 
       const value = req.body[field];
 
-      if (["name", "description", "category", "imageId"].includes(field)) {
+      if (["name", "description", "category", "location", "imageId"].includes(field)) {
         if (!isValidString(value)) {
           return res.status(400).json({
             success: false,

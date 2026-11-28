@@ -7,13 +7,56 @@ export interface MenuBrowseFilters {
   minPrice?: number;
   maxPrice?: number;
   location?: string;
-  sort: "newest" | "price_asc" | "price_desc";
+  sort: "newest" | "price_asc" | "price_desc" | "premium_first";
   page: number;
   limit: number;
 }
 
 const escapeRegex = (value: string) => {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
+
+const isPremiumUser = (user: any) => {
+  if (!user || user.isPremium !== true || user.subscriptionStatus !== "ACTIVE") {
+    return false;
+  }
+
+  if (user.premiumExpiresAt) {
+    const expiresAt = new Date(user.premiumExpiresAt);
+
+    if (Number.isNaN(expiresAt.getTime()) || expiresAt <= new Date()) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+// Featured placement is based on the vendor's verified subscription state.
+const getPremiumVendorMap = async (db: any, vendorIds: string[]) => {
+  const ids = [
+    ...new Set(vendorIds.filter((id) => ObjectId.isValid(id))),
+  ].map((id) => new ObjectId(id));
+
+  if (ids.length === 0) return new Map<string, boolean>();
+
+  const users = await db
+    .collection("user")
+    .find(
+      { _id: { $in: ids } },
+      {
+        projection: {
+          isPremium: 1,
+          subscriptionStatus: 1,
+          premiumExpiresAt: 1,
+        },
+      }
+    )
+    .toArray();
+
+  return new Map(
+    users.map((user: any) => [user._id.toString(), isPremiumUser(user)])
+  );
 };
 
 const getPublicRestaurant = async (restaurantId: string) => {
@@ -48,22 +91,27 @@ export const getAvailableMenuItems = async (
   };
 
   if (filters.location) {
+    const pattern = escapeRegex(filters.location);
     const restaurants = await db
       .collection("restaurants")
       .find(
         {
-          address: {
-            $regex: escapeRegex(filters.location),
-            $options: "i",
-          },
+          address: { $regex: pattern, $options: "i" },
         },
         { projection: { _id: 1 } }
       )
       .toArray();
 
-    query.restaurantId = {
-      $in: restaurants.map((restaurant) => restaurant._id.toString()),
-    };
+    // Items can carry their own location; older items fall back to the
+    // restaurant address.
+    query.$or = [
+      {
+        restaurantId: {
+          $in: restaurants.map((restaurant) => restaurant._id.toString()),
+        },
+      },
+      { location: { $regex: pattern, $options: "i" } },
+    ];
   }
 
   if (filters.search) {
@@ -107,14 +155,45 @@ export const getAvailableMenuItems = async (
     sortOptions = { price: -1 };
   }
 
-  const total = await menuItems.countDocuments(query);
+  let total: number;
+  let items: any[];
 
-  const items = await menuItems
-    .find(query)
-    .sort(sortOptions)
-    .skip((filters.page - 1) * filters.limit)
-    .limit(filters.limit)
-    .toArray();
+  if (filters.sort === "premium_first") {
+    // Featured placement: Premium vendors first, then newest.
+    const allItems = await menuItems.find(query).toArray();
+    const premiumMap = await getPremiumVendorMap(
+      db,
+      allItems.map((item) => item.vendorId)
+    );
+
+    allItems.sort((a, b) => {
+      const premiumDifference =
+        Number(premiumMap.get(b.vendorId) === true) -
+        Number(premiumMap.get(a.vendorId) === true);
+
+      if (premiumDifference !== 0) return premiumDifference;
+
+      return (
+        new Date(b.createdAt).getTime() -
+        new Date(a.createdAt).getTime()
+      );
+    });
+
+    total = allItems.length;
+    items = allItems.slice(
+      (filters.page - 1) * filters.limit,
+      filters.page * filters.limit
+    );
+  } else {
+    total = await menuItems.countDocuments(query);
+
+    items = await menuItems
+      .find(query)
+      .sort(sortOptions)
+      .skip((filters.page - 1) * filters.limit)
+      .limit(filters.limit)
+      .toArray();
+  }
 
   const restaurantIds = [
     ...new Set(
@@ -149,6 +228,11 @@ export const getAvailableMenuItems = async (
     ])
   );
 
+  const premiumMap = await getPremiumVendorMap(
+    db,
+    items.map((item) => item.vendorId)
+  );
+
   const result = items.map((item) => {
     const {
       vendorId: _vendorId,
@@ -156,12 +240,24 @@ export const getAvailableMenuItems = async (
       ...publicItem
     } = item;
 
+    const restaurant =
+      typeof item.restaurantId === "string"
+        ? restaurantMap.get(item.restaurantId) ?? null
+        : null;
+
+    const location =
+      typeof item.location === "string" && item.location.trim().length > 0
+        ? item.location
+        : restaurant?.address ?? null;
+
     return {
       ...publicItem,
-      restaurant:
-        typeof item.restaurantId === "string"
-          ? restaurantMap.get(item.restaurantId) ?? null
-          : null,
+      // Spec aliases: `itemName` / `status` alongside the existing fields.
+      itemName: item.name,
+      status: item.approvalStatus,
+      location,
+      isPremium: premiumMap.get(item.vendorId) === true,
+      restaurant,
     };
   });
 
@@ -202,8 +298,19 @@ export const getAvailableMenuItemById = async (
       ? await getPublicRestaurant(item.restaurantId)
       : null;
 
+  const premiumMap = await getPremiumVendorMap(db, [item.vendorId]);
+
+  const location =
+    typeof item.location === "string" && item.location.trim().length > 0
+      ? item.location
+      : restaurant?.address ?? null;
+
   return {
     ...publicItem,
+    itemName: item.name,
+    status: item.approvalStatus,
+    location,
+    isPremium: premiumMap.get(item.vendorId) === true,
     restaurant,
   };
 };
