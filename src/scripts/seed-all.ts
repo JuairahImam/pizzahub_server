@@ -116,8 +116,8 @@ const seedAll = async () => {
 
       const result = await restaurants.insertOne({
         vendorId,
-        name: "PizzaHub Demo Restaurant",
-        description: "Fresh and delicious pizzas for everyone.",
+        name: "oven story pizza",
+        description: "Wood-fired pizzas made with slow-fermented dough and fresh ingredients.",
         address: "Dhanmondi, Dhaka, Bangladesh",
         phone: "01700000000",
         createdAt: now,
@@ -283,7 +283,7 @@ const seedAll = async () => {
       });
     }
 
-    console.log("Demo orders ready.");
+    console.log("Orders ready.");
     console.log("Admin ID:", adminId);
     console.log("Vendor ID:", vendorId);
     console.log("Customer ID:", customerId);
